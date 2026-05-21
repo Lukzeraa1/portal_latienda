@@ -957,14 +957,21 @@ async function gsTestarConexao(){
   }catch(e){res.style.color='var(--red)';res.textContent='Erro: '+e.message;}
 }
 async function init(){
-  // Config.sheetsUrl já é inicializado do localStorage na declaração
-  seedData();
   document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const td=today();['cli-inicio','cli-vencimento','tar-data','rec-data','des-data','ev-data','doc-data','lem-data','churn-data','pros-followup'].forEach(id=>{const el=document.getElementById(id);if(el&&el.type==='date')el.value=td;});
+
   if(Config.sheetsUrl){
+    // Tem URL configurada: carrega direto do Sheets (sem seedData)
+    document.getElementById('loading-overlay').style.display='flex';
     const ok=await GS.carregarTudo();
-    if(ok)render(currentPage);
+    document.getElementById('loading-overlay').style.display='none';
+    // Se veio vazio do Sheets (primeira vez), popula com dados de exemplo
+    if(ok && DB.get('clientes').length===0) seedData();
+  } else {
+    // Sem URL: usa localStorage, popula exemplo se vazio
+    seedData();
   }
+
   renderDashboard();updateBadges();setTimeout(showToasts,1500);
 }
 init();
@@ -1001,6 +1008,13 @@ init();
     <button class="btn btn-ghost" onclick="document.getElementById('modal-gsconfig').classList.remove('open')">Fechar</button>
     <button class="btn btn-primary" onclick="gsSalvarConfig()">Salvar URL</button>
   </div></div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,13,15,0.92);backdrop-filter:blur(8px);z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+  <div style="width:48px;height:48px;border:3px solid rgba(204,51,255,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div style="font-family:var(--font-head);font-size:15px;color:var(--text2)">Carregando dados do Google Sheets...</div>
+  <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </div>
 </body>
 </html>
