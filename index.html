@@ -511,14 +511,14 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 </div>
 
 <script>
-// CONFIGURACAO: cole a URL do Apps Script aqui
-const SHEETS_URL = '';
+// CONFIGURACAO gerenciada pelo modal — não edite manualmente
+const Config = { sheetsUrl: localStorage.getItem('gs_url') || '' };
 
 const DB={
   get(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}},
   set(k,v){
     localStorage.setItem(k,JSON.stringify(v));
-    if(SHEETS_URL) GS.sync(k,v);
+    if(Config.sheetsUrl) GS.sync(k,v);
   }
 };
 
@@ -536,18 +536,18 @@ const GS={
     if(type==='ok'||type==='err')setTimeout(()=>bar.style.display='none',4000);
   },
   async sync(tabela,dados){
-    if(!SHEETS_URL)return;
+    if(!Config.sheetsUrl)return;
     this._status('Salvando '+tabela+'...','info');
     try{
-      await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'set',tabela,dados})});
+      await fetch(Config.sheetsUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'set',tabela,dados})});
       this._status('Salvo no Sheets','ok');
     }catch(e){this._status('Erro: '+e.message,'err');}
   },
   async carregarTudo(){
-    if(!SHEETS_URL){this._status('Cole a URL do Apps Script nas Configuracoes','warn');return false;}
+    if(!Config.sheetsUrl){this._status('Cole a URL do Apps Script nas Configuracoes','warn');return false;}
     this._status('Carregando do Google Sheets...','info');
     try{
-      const r=await fetch(SHEETS_URL+'?acao=getAll');
+      const r=await fetch(Config.sheetsUrl+'?acao=getAll');
       const dados=await r.json();
       if(dados.erro)throw new Error(dados.erro);
       TABELAS.forEach(t=>{if(dados[t]!==undefined)localStorage.setItem(t,JSON.stringify(dados[t]));});
@@ -556,15 +556,15 @@ const GS={
     }catch(e){this._status('Usando dados locais ('+e.message+')','warn');return false;}
   },
   async sincronizarTudo(){
-    if(!SHEETS_URL){alert('Cole a URL do Apps Script nas Configuracoes primeiro!');return;}
+    if(!Config.sheetsUrl){alert('Cole a URL do Apps Script nas Configuracoes primeiro!');return;}
     this._status('Sincronizando tudo...','info');
     try{
       const payload={};TABELAS.forEach(t=>{payload[t]=DB.get(t);});
-      await fetch(SHEETS_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'setAll',dados:payload})});
+      await fetch(Config.sheetsUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'setAll',dados:payload})});
       this._status('Tudo sincronizado!','ok');
     }catch(e){this._status('Erro: '+e.message,'err');}
   },
-  abrirConfig(){document.getElementById('modal-gsconfig').classList.add('open');document.getElementById('gs-url-input').value=SHEETS_URL;}
+  abrirConfig(){document.getElementById('modal-gsconfig').classList.add('open');document.getElementById('gs-url-input').value=Config.sheetsUrl;}
 };
 function uid(){return Date.now()+Math.random()}
 function fmt(v){return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}
@@ -938,19 +938,18 @@ function showToasts(){const l=DB.get('lembretes').filter(x=>x.ativo);const c=doc
 // INIT
 function gsSalvarConfig(){
   const url=document.getElementById('gs-url-input').value.trim();
-  // update SHEETS_URL at runtime via reassignment trick
-  window._sheetsUrl=url;
-  Object.defineProperty(window,'SHEETS_URL',{get:()=>window._sheetsUrl,configurable:true});
+  if(!url){alert('Cole a URL do Apps Script antes de salvar!');return;}
+  Config.sheetsUrl=url;
   localStorage.setItem('gs_url',url);
   document.getElementById('modal-gsconfig').classList.remove('open');
-  GS._status('URL salva. Carregando dados...','info');
+  GS._status('URL salva! Carregando dados do Sheets...','info');
   GS.carregarTudo().then(ok=>{if(ok){render(currentPage);}});
 }
 async function gsTestarConexao(){
   const url=document.getElementById('gs-url-input').value.trim();
   const res=document.getElementById('gs-test-result');
-  if(!url){res.textContent='Cole a URL primeiro.';return;}
-  res.textContent='Testando...';
+  if(!url){res.style.color='var(--amber)';res.textContent='Cole a URL primeiro.';return;}
+  res.style.color='var(--text2)';res.textContent='Testando...';
   try{
     const r=await fetch(url+'?acao=ping');
     const d=await r.json();
@@ -958,13 +957,11 @@ async function gsTestarConexao(){
   }catch(e){res.style.color='var(--red)';res.textContent='Erro: '+e.message;}
 }
 async function init(){
-  // Recupera URL salva anteriormente
-  const savedUrl=localStorage.getItem('gs_url')||'';
-  if(savedUrl){window._sheetsUrl=savedUrl;Object.defineProperty(window,'SHEETS_URL',{get:()=>window._sheetsUrl,configurable:true});}
+  // Config.sheetsUrl já é inicializado do localStorage na declaração
   seedData();
   document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const td=today();['cli-inicio','cli-vencimento','tar-data','rec-data','des-data','ev-data','doc-data','lem-data','churn-data','pros-followup'].forEach(id=>{const el=document.getElementById(id);if(el&&el.type==='date')el.value=td;});
-  if(savedUrl){
+  if(Config.sheetsUrl){
     const ok=await GS.carregarTudo();
     if(ok)render(currentPage);
   }
