@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Tienda — Portal Interno</title>
+<title>LaT — Portal Interno</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
@@ -236,7 +236,7 @@ tr:hover td{background:rgba(204,51,255,0.03)}
   <div class="sidebar-logo">
     <div class="brand">
       <div class="brand-icon">🏠</div>
-      <div class="brand-text">La <span>Tienda</span></div>
+      <div class="brand-text">La<span>T</span></div>
     </div>
     <div class="tagline">Portal Interno · Marketing</div>
   </div>
@@ -266,7 +266,7 @@ tr:hover td{background:rgba(204,51,255,0.03)}
   <div class="topbar">
     <div>
       <div class="topbar-title" id="topbar-title">Dashboard</div>
-      <div class="topbar-sub" id="topbar-sub">Visão geral — La Tienda</div>
+      <div class="topbar-sub" id="topbar-sub">Visão geral — LaT</div>
     </div>
     <div id="topbar-action"></div>
   </div>
@@ -298,7 +298,7 @@ tr:hover td{background:rgba(204,51,255,0.03)}
         <button class="tab" onclick="setTab(this,'tab-inativos')">Inativos / Churn</button>
       </div>
       <div id="tab-ativos"><div class="card"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-ativos"></tbody></table></div></div></div>
-      <div id="tab-inativos" style="display:none"><div class="card"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Saída</th><th>Motivo</th></tr></thead><tbody id="tbody-clientes-inativos"></tbody></table></div></div></div>
+      <div id="tab-inativos" style="display:none"><div class="card"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Saída</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-inativos"></tbody></table></div></div></div>
     </div>
 
     <!-- PROSPECÇÃO -->
@@ -641,7 +641,7 @@ function seedData(){
 }
 
 const pageConfig={
-  dashboard:{title:'Dashboard',sub:'Visão geral — La Tienda',action:''},
+  dashboard:{title:'Dashboard',sub:'Visão geral — LaT',action:''},
   clientes:{title:'Clientes',sub:'Gerencie sua carteira',action:'<button class="btn btn-primary" onclick="openModal(\'modal-cliente\')">+ Novo Cliente</button>'},
   prospeccao:{title:'Prospecção',sub:'Pipeline de novos clientes',action:'<button class="btn btn-primary" onclick="openModal(\'modal-pros\')">+ Novo Lead</button>'},
   financeiro:{title:'Financeiro',sub:'Receitas e despesas',action:''},
@@ -738,7 +738,18 @@ function renderClientes(){
       <button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir cliente">🗑️</button>
     </div></td></tr>`;
   }).join(''):`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum cliente ativo</div></div></td></tr>`;
-  document.getElementById('tbody-clientes-inativos').innerHTML=in_.length?in_.map(c=>`<tr><td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="background:var(--text3)">${initials(c.nome)}</div><div style="font-weight:500">${c.nome}</div></div></td><td><div style="font-size:12px">${c.doc||'—'}</div><div style="font-size:10px;color:var(--text3)">${c.tipodoc?.toUpperCase()||''}</div></td><td>${c.servico}</td><td>${fmt(c.valor)}</td><td>${c.dataChurn?new Date(c.dataChurn+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td><td><span class="badge badge-red">${c.motivoChurn||'—'}</span></td></tr>`).join(''):`<tr><td colspan="6"><div class="empty"><div class="empty-text">Nenhum churn 🎉</div></div></td></tr>`;
+  document.getElementById('tbody-clientes-inativos').innerHTML=in_.length?in_.map(c=>`<tr style="cursor:pointer" onclick="verPerfil(${c.id})">
+    <td><div style="display:flex;align-items:center;gap:10px">
+      <div class="avatar" style="background:var(--text3);cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.12)';this.style.boxShadow='0 0 0 3px rgba(144,144,168,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">${initials(c.nome)}</div>
+      <div><div style="font-weight:500">${c.nome}</div><div style="font-size:11px;color:var(--text3)">${c.responsavel||'—'}</div></div>
+    </div></td>
+    <td onclick="event.stopPropagation()"><div style="font-size:12px">${c.doc||'—'}</div><div style="font-size:10px;color:var(--text3)">${c.tipodoc?.toUpperCase()||''}</div></td>
+    <td onclick="event.stopPropagation()">${c.servico}</td>
+    <td onclick="event.stopPropagation()">${fmt(c.valor)}</td>
+    <td onclick="event.stopPropagation()">${c.dataChurn?new Date(c.dataChurn+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td>
+    <td onclick="event.stopPropagation()"><span class="badge badge-red">${c.motivoChurn||'—'}</span></td>
+    <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir cliente">🗑️</button></td>
+  </tr>`).join(''):`<tr><td colspan="7"><div class="empty"><div class="empty-text">Nenhum churn 🎉</div></div></td></tr>`;
 }
 
 function excluirCliente(id){
