@@ -307,6 +307,7 @@ tr:hover td{background:rgba(204,51,255,0.03)}
     <!-- FINANCEIRO -->
     <div class="page" id="page-financeiro">
       <div class="stats-grid" id="fin-stats"></div>
+      <div class="stats-grid" id="fin-stats2" style="margin-bottom:20px"></div>
       <div class="grid-2" style="margin-bottom:18px">
         <div class="card"><div class="card-header"><div class="card-title">📈 Receitas do Mês</div><button class="btn btn-ghost btn-sm" onclick="openModal('modal-receita')">+ Lançar</button></div><div id="lista-receitas"></div></div>
         <div class="card"><div class="card-header"><div class="card-title">📉 Despesas do Mês</div><button class="btn btn-ghost btn-sm" onclick="openModal('modal-despesa')">+ Lançar</button></div><div id="lista-despesas"></div></div>
@@ -839,13 +840,48 @@ function removerTarefa(id){DB.set('tarefas',DB.get('tarefas').filter(t=>t.id!=id
 let recChart;
 function renderFinanceiro(){
   const rc=DB.get('receitas'),ds=DB.get('despesas');
+  const cl=DB.get('clientes'),at=cl.filter(c=>c.status==='ativo');
   const rT=rc.reduce((s,r)=>s+Number(r.valor),0),dT=ds.reduce((s,d)=>s+Number(d.valor),0);
   const pend=rc.filter(r=>r.status==='pendente').reduce((s,r)=>s+Number(r.valor),0);
+
+  // Lucro líquido = receitas recebidas - despesas
+  const recebido=rc.filter(r=>r.status==='recebido').reduce((s,r)=>s+Number(r.valor),0);
+  const lucroLiq=recebido-dT;
+  const margemLiq=recebido>0?Math.round(lucroLiq/recebido*100):0;
+
+  // MRR = soma dos contratos ativos
+  const mrr=at.reduce((s,c)=>s+Number(c.valor||0),0);
+
+  // Ticket médio = MRR / nº clientes ativos
+  const ticket=at.length>0?mrr/at.length:0;
+
+  // LTV = ticket médio × tempo médio de contrato em meses (estimado 12 se sem histórico)
+  // Calcula duração média dos contratos em meses
+  const duracoes=at.map(c=>{
+    if(!c.inicio||!c.vencimento)return 12;
+    const ini=new Date(c.inicio),fim=new Date(c.vencimento);
+    const m=Math.max(1,Math.round((fim-ini)/2.628e9));
+    return m;
+  });
+  const duracaoMedia=duracoes.length>0?Math.round(duracoes.reduce((a,b)=>a+b,0)/duracoes.length):12;
+  const ltv=ticket*duracaoMedia;
+
+  // Estimativa anual = MRR × 12
+  const anoEst=mrr*12;
+
+  // Linha 1 — métricas do mês
   document.getElementById('fin-stats').innerHTML=`
-    <div class="stat-card" style="--stat-color:var(--green)"><div class="stat-icon">📈</div><div class="stat-label">Receitas</div><div class="stat-value" style="color:var(--green)">${fmt(rT)}</div><div class="stat-change">${rc.length} lançamentos</div></div>
-    <div class="stat-card" style="--stat-color:var(--red)"><div class="stat-icon">📉</div><div class="stat-label">Despesas</div><div class="stat-value" style="color:var(--red)">${fmt(dT)}</div><div class="stat-change">${ds.length} lançamentos</div></div>
-    <div class="stat-card" style="--stat-color:${rT-dT>=0?'var(--green)':'var(--red)'}"><div class="stat-icon">💰</div><div class="stat-label">Resultado</div><div class="stat-value" style="color:${rT-dT>=0?'var(--green)':'var(--red)'}">${fmt(rT-dT)}</div><div class="stat-change">Margem: ${rT?Math.round((rT-dT)/rT*100):0}%</div></div>
-    <div class="stat-card" style="--stat-color:var(--amber)"><div class="stat-icon">⏳</div><div class="stat-label">A Receber</div><div class="stat-value" style="color:var(--amber)">${fmt(pend)}</div><div class="stat-change">Pendente</div></div>`;
+    <div class="stat-card" style="--stat-color:var(--green)"><div class="stat-icon">📈</div><div class="stat-label">Receitas do Mês</div><div class="stat-value" style="color:var(--green)">${fmt(rT)}</div><div class="stat-change">${rc.length} lançamentos · ${fmt(pend)} pendente</div></div>
+    <div class="stat-card" style="--stat-color:var(--red)"><div class="stat-icon">📉</div><div class="stat-label">Despesas do Mês</div><div class="stat-value" style="color:var(--red)">${fmt(dT)}</div><div class="stat-change">${ds.length} lançamentos</div></div>
+    <div class="stat-card" style="--stat-color:${lucroLiq>=0?'var(--green)':'var(--red)'}"><div class="stat-icon">💵</div><div class="stat-label">Lucro Líquido Mensal</div><div class="stat-value" style="color:${lucroLiq>=0?'var(--green)':'var(--red)'}">${fmt(lucroLiq)}</div><div class="stat-change">Margem líquida: ${margemLiq}%</div></div>
+    <div class="stat-card" style="--stat-color:var(--amber)"><div class="stat-icon">⏳</div><div class="stat-label">A Receber</div><div class="stat-value" style="color:var(--amber)">${fmt(pend)}</div><div class="stat-change">Aguardando pagamento</div></div>`;
+
+  // Linha 2 — métricas estratégicas
+  document.getElementById('fin-stats2').innerHTML=`
+    <div class="stat-card" style="--stat-color:var(--cyan)"><div class="stat-icon">🎯</div><div class="stat-label">Ticket Médio</div><div class="stat-value" style="color:var(--cyan)">${fmt(ticket)}</div><div class="stat-change">Por cliente ativo · ${at.length} clientes</div></div>
+    <div class="stat-card" style="--stat-color:var(--accent)"><div class="stat-icon">♾️</div><div class="stat-label">LTV Médio</div><div class="stat-value" style="color:var(--accent)">${fmt(ltv)}</div><div class="stat-change">Ticket × ${duracaoMedia} meses de contrato</div></div>
+    <div class="stat-card" style="--stat-color:var(--blue)"><div class="stat-icon">🚀</div><div class="stat-label">MRR</div><div class="stat-value" style="color:var(--blue)">${fmt(mrr)}</div><div class="stat-change">Receita recorrente mensal</div></div>
+    <div class="stat-card" style="--stat-color:var(--green)"><div class="stat-icon">📆</div><div class="stat-label">Estimativa Anual</div><div class="stat-value" style="color:var(--green)">${fmt(anoEst)}</div><div class="stat-change">MRR × 12 meses</div></div>`;
   document.getElementById('lista-receitas').innerHTML=rc.length?rc.map(r=>`<div class="finance-item"><div><div class="finance-label">${r.desc}</div><div class="finance-sub">${r.cliente||'Avulso'}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge ${r.status==='recebido'?'badge-green':'badge-amber'}">${r.status}</span><div class="finance-value" style="color:var(--green)">${fmt(r.valor)}</div><button onclick="removerReceita(${r.id})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div></div>`).join(''):'<div class="empty"><div class="empty-text">Nenhuma receita</div></div>';
   document.getElementById('lista-despesas').innerHTML=ds.length?ds.map(d=>`<div class="finance-item"><div><div class="finance-label">${d.desc}</div><div class="finance-sub">${d.categoria}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="finance-value" style="color:var(--red)">-${fmt(d.valor)}</div><button onclick="removerDespesa(${d.id})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div></div>`).join(''):'<div class="empty"><div class="empty-text">Nenhuma despesa</div></div>';
   const pc={};rc.forEach(r=>{pc[r.cliente||'Avulso']=(pc[r.cliente||'Avulso']||0)+Number(r.valor)});
