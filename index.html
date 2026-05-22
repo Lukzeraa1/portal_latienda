@@ -301,8 +301,8 @@ tr:hover td{background:rgba(204,51,255,0.03)}
         <button class="tab active" onclick="setTab(this,'tab-ativos')">Ativos</button>
         <button class="tab" onclick="setTab(this,'tab-inativos')">Inativos / Churn</button>
       </div>
-      <div id="tab-ativos"><div class="card"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-ativos"></tbody></table></div></div></div>
-      <div id="tab-inativos" style="display:none"><div class="card"><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Saída</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-inativos"></tbody></table></div></div></div>
+      <div id="tab-ativos"><div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-ativos"></tbody></table></div></div></div>
+      <div id="tab-inativos" style="display:none"><div class="card"><div class="table-wrap"><table><thead><tr><th>#</th><th>Cliente</th><th>Doc</th><th>Serviço</th><th>Valor/mês</th><th>Saída</th><th>Motivo</th><th>Ações</th></tr></thead><tbody id="tbody-clientes-inativos"></tbody></table></div></div></div>
     </div>
 
     <!-- PROSPECÇÃO -->
@@ -386,8 +386,9 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 
 <!-- ═══ MODALS ═══ -->
 <div class="modal-overlay" id="modal-cliente">
-  <div class="modal"><div class="modal-header"><span class="modal-title">Novo Cliente</span><button class="modal-close" onclick="closeModal('modal-cliente')">✕</button></div>
+  <div class="modal"><div class="modal-header"><span class="modal-title" id="modal-cli-title">Novo Cliente</span><button class="modal-close" onclick="closeModal('modal-cliente');resetFormCliente()">✕</button></div>
   <div class="modal-body">
+    <input type="hidden" id="cli-edit-id">
     <div class="form-row"><div class="form-group"><label class="form-label">Nome / Empresa *</label><input class="form-input" id="cli-nome" placeholder="Ex: Empresa XYZ"></div><div class="form-group"><label class="form-label">Responsável</label><input class="form-input" id="cli-responsavel" placeholder="Nome do contato"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">Tipo de Pessoa</label><select class="form-select" id="cli-tipodoc" onchange="atualizarMascara()"><option value="cnpj">PJ — CNPJ</option><option value="cpf">PF — CPF</option></select></div><div class="form-group"><label class="form-label" id="cli-doc-label">CNPJ</label><input class="form-input" id="cli-doc" placeholder="00.000.000/0001-00" maxlength="18"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input class="form-input" id="cli-tel" placeholder="(00) 00000-0000"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="cli-email" type="email" placeholder="contato@empresa.com"></div></div>
@@ -395,7 +396,7 @@ tr:hover td{background:rgba(204,51,255,0.03)}
     <div class="form-row"><div class="form-group"><label class="form-label">Data de Início</label><input class="form-input" id="cli-inicio" type="date"></div><div class="form-group"><label class="form-label">Vencimento do Contrato</label><input class="form-input" id="cli-vencimento" type="date"></div></div>
     <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" id="cli-obs"></textarea></div>
   </div>
-  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-cliente')">Cancelar</button><button class="btn btn-primary" onclick="salvarCliente()">Salvar Cliente</button></div></div>
+  <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-cliente');resetFormCliente()">Cancelar</button><button class="btn btn-primary" id="cli-btn-salvar" onclick="salvarCliente()">Salvar Cliente</button></div></div>
 </div>
 
 <div class="modal-overlay" id="modal-perfil">
@@ -881,9 +882,11 @@ function renderClientes(){
   const cl=DB.get('clientes'),at=cl.filter(c=>c.status==='ativo'),in_=cl.filter(c=>c.status==='inativo');
   document.getElementById('tbody-clientes-ativos').innerHTML=at.length?at.map(c=>{
     const v=new Date(c.vencimento+'T12:00:00'),dias=Math.ceil((v-new Date())/864e5);
+    const cod=c.codigo||'—';
     return`<tr style="cursor:pointer" onclick="verPerfil(${c.id})">
+    <td onclick="event.stopPropagation()"><span style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-glow);padding:3px 8px;border-radius:6px">#${cod}</span></td>
     <td><div style="display:flex;align-items:center;gap:10px">
-      <div class="avatar" style="background:${avatarColor(c.nome)};cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.12)';this.style.boxShadow='0 0 0 3px rgba(204,51,255,0.35)'" onmouseout="this.style.transform='';this.style.boxShadow=''">${initials(c.nome)}</div>
+      <div class="avatar" style="background:${avatarColor(c.nome)}">${initials(c.nome)}</div>
       <div><div style="font-weight:500">${c.nome}</div><div style="font-size:11px;color:var(--text3)">${c.responsavel||'—'}</div></div>
     </div></td>
     <td onclick="event.stopPropagation()"><div style="font-size:12px;font-weight:500">${c.doc||'—'}</div><div style="font-size:10px;color:var(--text3)">${c.tipodoc?.toUpperCase()||''}</div></td>
@@ -892,13 +895,18 @@ function renderClientes(){
     <td onclick="event.stopPropagation()">${c.vencimento?new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td>
     <td onclick="event.stopPropagation()"><span class="badge ${dias<0?'badge-red':dias<=30?'badge-amber':'badge-green'}">${dias<0?'Vencido':dias<=30?`${dias}d`:'Em dia'}</span></td>
     <td onclick="event.stopPropagation()"><div style="display:flex;gap:5px">
-      <button class="btn btn-ghost btn-sm" onclick="editarChurnRisco(${c.id})">⚠️</button>
-      <button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir cliente">🗑️</button>
+      <button class="btn btn-ghost btn-sm" onclick="editarCliente(${c.id})" title="Editar">✏️</button>
+      <button class="btn btn-ghost btn-sm" onclick="editarChurnRisco(${c.id})" title="Risco de churn">⚠️</button>
+      <button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir">🗑️</button>
     </div></td></tr>`;
-  }).join(''):`<tr><td colspan="7"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum cliente ativo</div></div></td></tr>`;
-  document.getElementById('tbody-clientes-inativos').innerHTML=in_.length?in_.map(c=>`<tr style="cursor:pointer" onclick="verPerfil(${c.id})">
+  }).join(''):`<tr><td colspan="8"><div class="empty"><div class="empty-icon">👥</div><div class="empty-text">Nenhum cliente ativo</div></div></td></tr>`;
+
+  document.getElementById('tbody-clientes-inativos').innerHTML=in_.length?in_.map(c=>{
+    const cod=c.codigo||'—';
+    return`<tr style="cursor:pointer" onclick="verPerfil(${c.id})">
+    <td onclick="event.stopPropagation()"><span style="font-family:var(--font-head);font-size:11px;font-weight:700;color:var(--text3);background:var(--bg3);padding:3px 8px;border-radius:6px">#${cod}</span></td>
     <td><div style="display:flex;align-items:center;gap:10px">
-      <div class="avatar" style="background:var(--text3);cursor:pointer;transition:transform .15s,box-shadow .15s" onmouseover="this.style.transform='scale(1.12)';this.style.boxShadow='0 0 0 3px rgba(144,144,168,0.4)'" onmouseout="this.style.transform='';this.style.boxShadow=''">${initials(c.nome)}</div>
+      <div class="avatar" style="background:var(--text3)">${initials(c.nome)}</div>
       <div><div style="font-weight:500">${c.nome}</div><div style="font-size:11px;color:var(--text3)">${c.responsavel||'—'}</div></div>
     </div></td>
     <td onclick="event.stopPropagation()"><div style="font-size:12px">${c.doc||'—'}</div><div style="font-size:10px;color:var(--text3)">${c.tipodoc?.toUpperCase()||''}</div></td>
@@ -906,8 +914,12 @@ function renderClientes(){
     <td onclick="event.stopPropagation()">${fmt(c.valor)}</td>
     <td onclick="event.stopPropagation()">${c.dataChurn?new Date(c.dataChurn+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</td>
     <td onclick="event.stopPropagation()"><span class="badge badge-red">${c.motivoChurn||'—'}</span></td>
-    <td onclick="event.stopPropagation()"><button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir cliente">🗑️</button></td>
-  </tr>`).join(''):`<tr><td colspan="7"><div class="empty"><div class="empty-text">Nenhum churn 🎉</div></div></td></tr>`;
+    <td onclick="event.stopPropagation()"><div style="display:flex;gap:5px">
+      <button class="btn btn-ghost btn-sm" onclick="editarCliente(${c.id})" title="Editar">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="excluirCliente(${c.id})" title="Excluir">🗑️</button>
+    </div></td>
+  </tr>`;
+  }).join(''):`<tr><td colspan="8"><div class="empty"><div class="empty-text">Nenhum churn 🎉</div></div></td></tr>`;
 }
 
 function excluirCliente(id){
@@ -938,7 +950,7 @@ function verPerfil(id){
 
   // Header
   document.getElementById('perfil-nome-title').textContent=c.nome;
-  document.getElementById('perfil-sub').textContent=(c.servico||'')+(c.valor?' · '+fmt(c.valor)+'/mês':'');
+  document.getElementById('perfil-sub').textContent=`#${c.codigo||'—'} · ${c.servico||''}${c.valor?' · '+fmt(c.valor)+'/mês':''}`;
   const av=document.getElementById('perfil-avatar');
   av.textContent=initials(c.nome);av.style.background=avatarColor(c.nome);
 
@@ -948,16 +960,20 @@ function verPerfil(id){
   document.getElementById('perfil-tab-info').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div>
-        <div class="perfil-section-title">Dados do Cliente</div>
+        <div class="perfil-section-title" style="margin-bottom:12px">
+          Dados do Cliente
+          <button class="btn btn-ghost btn-sm" onclick="editarCliente(${c.id})" style="font-size:11px">✏️ Editar</button>
+        </div>
         <div style="font-size:13px;line-height:2.2">
-          <div>📋 <b>${c.tipodoc?.toUpperCase()||'—'}</b>: ${c.doc||'—'}</div>
+          <div>🆔 <b>Código</b>: <span style="font-family:var(--font-head);font-weight:700;color:var(--accent)">#${c.codigo||'—'}</span></div>
+          <div>📋 <b>${c.tipodoc?.toUpperCase()||'—'}</b>: ${c.doc||'<span style="color:var(--amber)">Não informado</span>'}</div>
           <div>👤 ${c.responsavel||'—'}</div>
           <div>📞 ${c.tel||'—'}</div>
           <div>✉️ ${c.email||'—'}</div>
           <div>🛠️ ${c.servico||'—'}</div>
           <div>💰 ${fmt(c.valor||0)}/mês</div>
-          <div>📅 Início: ${c.inicio?new Date(c.inicio+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
-          <div>⏳ Contrato até: ${v?v.toLocaleDateString('pt-BR'):'—'}
+          <div>📅 Início: ${c.inicio?new Date(c.inicio+'T12:00:00').toLocaleDateString('pt-BR'):'<span style="color:var(--amber)">Não informado</span>'}</div>
+          <div>⏳ Contrato até: ${v?v.toLocaleDateString('pt-BR'):'<span style="color:var(--amber)">Não informado</span>'}
             ${dias!==null?`<span class="badge ${dias<0?'badge-red':dias<=30?'badge-amber':'badge-green'}" style="margin-left:6px">${dias<0?'Vencido':dias<=30?dias+'d':'Em dia'}</span>`:''}
           </div>
         </div>
@@ -1087,7 +1103,86 @@ function salvarObsCliente(id){
 }
 function dMiniHtml(d){return`<div class="doc-mini"><div><div class="doc-mini-title">${d.titulo}</div><div class="doc-mini-sub">${d.data?new Date(d.data+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>${d.conteudo?`<div style="font-size:11px;color:var(--text2);margin-top:3px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.conteudo}</div>`:''}</div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="verDoc(${d.id})">Ver</button><button onclick="removerDoc(${d.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button></div></div>`;}
 function abrirModalDocCliente(tipo,nome){closeModal('modal-perfil');const n={relatorio:'Relatório',briefing:'Briefing',planejamento:'Planejamento'};document.getElementById('modal-doc-title').textContent='Novo '+n[tipo];document.getElementById('doc-tipo').value=tipo;document.getElementById('doc-cli-fixo').value=nome;populateSelects();setTimeout(()=>{const s=document.getElementById('doc-cliente');if(s)for(let o of s.options)if(o.value===nome){o.selected=true;break}},50);openModal('modal-documento');}
-function salvarCliente(){const n=document.getElementById('cli-nome').value.trim();if(!n)return alert('Nome é obrigatório');const cl=DB.get('clientes');cl.push({id:uid(),nome:n,status:'ativo',risco:0,responsavel:document.getElementById('cli-responsavel').value,tipodoc:document.getElementById('cli-tipodoc').value,doc:document.getElementById('cli-doc').value,tel:document.getElementById('cli-tel').value,email:document.getElementById('cli-email').value,servico:document.getElementById('cli-servico').value,valor:Number(document.getElementById('cli-valor').value)||0,inicio:document.getElementById('cli-inicio').value,vencimento:document.getElementById('cli-vencimento').value,obs:document.getElementById('cli-obs').value});DB.set('clientes',cl);closeModal('modal-cliente');document.getElementById('cli-nome').value='';renderClientes();updateBadges();}
+function proximoClienteId(){
+  const cl=DB.get('clientes');
+  if(!cl.length) return 100;
+  // Pega o maior código numérico (campo codigo) e soma 1
+  const max=cl.reduce((m,c)=>Math.max(m, Number(c.codigo)||0), 99);
+  return max+1;
+}
+function salvarCliente(){
+  const n=document.getElementById('cli-nome').value.trim();if(!n)return alert('Nome é obrigatório');
+  const cl=DB.get('clientes');
+  const editId=document.getElementById('cli-edit-id').value;
+  if(editId){
+    // EDITAR cliente existente
+    const c=cl.find(x=>x.id==editId);if(!c)return;
+    c.nome=n;
+    c.responsavel=document.getElementById('cli-responsavel').value;
+    c.tipodoc=document.getElementById('cli-tipodoc').value;
+    c.doc=document.getElementById('cli-doc').value;
+    c.tel=document.getElementById('cli-tel').value;
+    c.email=document.getElementById('cli-email').value;
+    c.servico=document.getElementById('cli-servico').value;
+    c.valor=Number(document.getElementById('cli-valor').value)||0;
+    c.inicio=document.getElementById('cli-inicio').value;
+    c.vencimento=document.getElementById('cli-vencimento').value;
+    c.obs=document.getElementById('cli-obs').value;
+    DB.set('clientes',cl);
+    closeModal('modal-cliente');
+    resetFormCliente();
+    renderClientes();updateBadges();
+    // Recarrega o perfil se estava aberto
+    if(document.getElementById('modal-perfil').classList.contains('open')) verPerfil(Number(editId));
+  } else {
+    // NOVO cliente
+    cl.push({id:uid(),codigo:proximoClienteId(),nome:n,status:'ativo',risco:0,
+      responsavel:document.getElementById('cli-responsavel').value,
+      tipodoc:document.getElementById('cli-tipodoc').value,
+      doc:document.getElementById('cli-doc').value,
+      tel:document.getElementById('cli-tel').value,
+      email:document.getElementById('cli-email').value,
+      servico:document.getElementById('cli-servico').value,
+      valor:Number(document.getElementById('cli-valor').value)||0,
+      inicio:document.getElementById('cli-inicio').value,
+      vencimento:document.getElementById('cli-vencimento').value,
+      obs:document.getElementById('cli-obs').value,
+    });
+    DB.set('clientes',cl);
+    closeModal('modal-cliente');
+    resetFormCliente();
+    renderClientes();updateBadges();
+  }
+}
+function resetFormCliente(){
+  ['cli-nome','cli-responsavel','cli-doc','cli-tel','cli-email','cli-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('cli-edit-id').value='';
+  document.getElementById('modal-cli-title').textContent='Novo Cliente';
+  document.getElementById('cli-btn-salvar').textContent='Salvar Cliente';
+}
+function editarCliente(id){
+  const c=DB.get('clientes').find(x=>x.id==id);if(!c)return;
+  // Fecha o perfil e abre o form de edição
+  closeModal('modal-perfil');
+  setTimeout(()=>{
+    document.getElementById('modal-cli-title').textContent='Editar Cliente';
+    document.getElementById('cli-btn-salvar').textContent='Salvar Alterações';
+    document.getElementById('cli-edit-id').value=id;
+    document.getElementById('cli-nome').value=c.nome||'';
+    document.getElementById('cli-responsavel').value=c.responsavel||'';
+    document.getElementById('cli-tipodoc').value=c.tipodoc||'cnpj';
+    atualizarMascara();
+    document.getElementById('cli-doc').value=c.doc||'';
+    document.getElementById('cli-tel').value=c.tel||'';
+    document.getElementById('cli-email').value=c.email||'';
+    document.getElementById('cli-servico').value=c.servico||'Tráfego Pago';
+    document.getElementById('cli-valor').value=c.valor||'';
+    document.getElementById('cli-inicio').value=c.inicio||'';
+    document.getElementById('cli-vencimento').value=c.vencimento||'';
+    document.getElementById('cli-obs').value=c.obs||'';
+    openModal('modal-cliente');
+  },150);
+}
 function atualizarMascara(){const t=document.getElementById('cli-tipodoc').value;document.getElementById('cli-doc-label').textContent=t==='cnpj'?'CNPJ':'CPF';document.getElementById('cli-doc').placeholder=t==='cnpj'?'00.000.000/0001-00':'000.000.000-00';document.getElementById('cli-doc').maxLength=t==='cnpj'?18:14;}
 function editarChurnRisco(id){const cl=DB.get('clientes'),c=cl.find(x=>x.id==id);if(!c)return;const r=prompt(`Risco "${c.nome}" (0–100):`,c.risco);if(r===null)return;c.risco=Math.min(100,Math.max(0,Number(r)||0));DB.set('clientes',cl);renderClientes();}
 
