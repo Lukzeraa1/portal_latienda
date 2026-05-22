@@ -395,7 +395,70 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 </div>
 
 <div class="modal-overlay" id="modal-perfil">
-  <div class="modal modal-wide"><div class="modal-header"><span class="modal-title" id="perfil-nome-title">Perfil</span><button class="modal-close" onclick="closeModal('modal-perfil')">✕</button></div><div class="modal-body" id="perfil-body"></div><div class="modal-footer" id="perfil-footer"><button class="btn btn-danger btn-sm" id="perfil-btn-excluir" onclick="">🗑️ Excluir Cliente</button><button class="btn btn-ghost" onclick="closeModal('modal-perfil')">Fechar</button></div></div>
+  <div class="modal modal-wide" style="width:860px">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="avatar" id="perfil-avatar" style="width:40px;height:40px;font-size:15px"></div>
+        <div><div class="modal-title" id="perfil-nome-title">Perfil</div><div style="font-size:11px;color:var(--text3)" id="perfil-sub"></div></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-perfil')">✕</button>
+    </div>
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 22px">
+      <button class="tab active" id="ptab-info"    onclick="perfilTab('info')"       style="font-size:12px">👤 Informações</button>
+      <button class="tab"        id="ptab-fin"     onclick="perfilTab('fin')"        style="font-size:12px">💰 Financeiro</button>
+      <button class="tab"        id="ptab-obs"     onclick="perfilTab('obs')"        style="font-size:12px">📝 Observações</button>
+      <button class="tab"        id="ptab-docs"    onclick="perfilTab('docs')"       style="font-size:12px">📁 Docs</button>
+    </div>
+    <div class="modal-body" style="padding:20px 22px;min-height:340px">
+      <div id="perfil-tab-info"></div>
+      <div id="perfil-tab-fin"  style="display:none"></div>
+      <div id="perfil-tab-obs"  style="display:none"></div>
+      <div id="perfil-tab-docs" style="display:none"></div>
+    </div>
+    <div class="modal-footer" id="perfil-footer">
+      <button class="btn btn-danger btn-sm" id="perfil-btn-excluir" onclick="">🗑️ Excluir</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-perfil')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL lançar pagamento pelo perfil -->
+<div class="modal-overlay" id="modal-pgto">
+  <div class="modal" style="width:480px">
+    <div class="modal-header"><span class="modal-title">💳 Lançar Pagamento</span><button class="modal-close" onclick="closeModal('modal-pgto')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Descrição *</label><input class="form-input" id="pgto-desc" placeholder="Ex: Mensalidade Maio"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Valor (R$) *</label><input class="form-input" id="pgto-valor" type="number" placeholder="0,00"></div>
+        <div class="form-group"><label class="form-label">Data do pagamento *</label><input class="form-input" id="pgto-data" type="date"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Forma de pagamento</label>
+          <select class="form-select" id="pgto-forma">
+            <option value="pix">💸 Pix</option>
+            <option value="dinheiro">💵 Dinheiro</option>
+            <option value="cartao">💳 Cartão</option>
+            <option value="permuta">🤝 Permuta</option>
+            <option value="boleto">📄 Boleto</option>
+            <option value="transferencia">🏦 Transferência</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Status</label>
+          <select class="form-select" id="pgto-status">
+            <option value="recebido">✅ Recebido</option>
+            <option value="pendente">⏳ Pendente</option>
+            <option value="atrasado">🔴 Atrasado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Observação</label><textarea class="form-textarea" id="pgto-obs" style="min-height:56px"></textarea></div>
+      <input type="hidden" id="pgto-cliente">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pgto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarPagamento()">Salvar Pagamento</button>
+    </div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="modal-pros">
@@ -523,7 +586,7 @@ const DB={
   }
 };
 
-const TABELAS=['clientes','prospeccao','tarefas','receitas','despesas','eventos','documentos','lembretes','metas'];
+const TABELAS=['clientes','prospeccao','tarefas','receitas','despesas','eventos','documentos','lembretes','metas','pagamentos'];
 const GS={
   _bar(){return document.getElementById('gs-syncbar');},
   _status(msg,type){
@@ -762,27 +825,107 @@ function excluirCliente(id){
   renderClientes();updateBadges();
   if(currentPage==='dashboard')renderDashboard();
 }
+function perfilTab(tab){
+  ['info','fin','obs','docs'].forEach(t=>{
+    document.getElementById('perfil-tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('ptab-'+t).classList.toggle('active',t===tab);
+  });
+}
+
+let _perfilId=null;
 function verPerfil(id){
+  _perfilId=id;
   const c=DB.get('clientes').find(x=>x.id==id);if(!c)return;
   const docs=DB.get('documentos'),tk=DB.get('tarefas').filter(t=>t.cliente===c.nome&&!t.done);
   const relats=docs.filter(d=>d.cliente===c.nome&&d.tipo==='relatorio');
   const briefs=docs.filter(d=>d.cliente===c.nome&&d.tipo==='briefing');
   const plans=docs.filter(d=>d.cliente===c.nome&&d.tipo==='planejamento');
+  const pgtos=(DB.get('pagamentos')||[]).filter(p=>p.clienteId==id).sort((a,b)=>b.data.localeCompare(a.data));
+
+  // Header
   document.getElementById('perfil-nome-title').textContent=c.nome;
-  document.getElementById('perfil-body').innerHTML=`
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div><div class="perfil-section-title">Informações</div><div style="font-size:13px;line-height:2.1">
-        <div>📋 <b>${c.tipodoc?.toUpperCase()}</b>: ${c.doc||'—'}</div><div>👤 ${c.responsavel||'—'}</div>
-        <div>📞 ${c.tel||'—'}</div><div>✉️ ${c.email||'—'}</div><div>🛠️ ${c.servico}</div>
-        <div>💰 ${fmt(c.valor)}/mês</div>
-        <div>📅 Início: ${c.inicio?new Date(c.inicio+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
-        <div>⏳ Venc.: ${c.vencimento?new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
-        ${c.obs?`<div style="color:var(--text3);font-size:12px;margin-top:4px">📝 ${c.obs}</div>`:''}
-      </div></div>
-      <div><div class="perfil-section-title">Tarefas Pendentes</div>
-        ${tk.length?tk.slice(0,5).map(t=>`<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border)"><span class="badge ${t.prioridade==='urgente'?'badge-red':t.prioridade==='alta'?'badge-amber':'badge-purple'}" style="margin-right:6px">${t.prioridade}</span>${t.titulo}</div>`).join(''):'<div style="font-size:12px;color:var(--text3)">Sem tarefas pendentes ✓</div>'}
+  document.getElementById('perfil-sub').textContent=(c.servico||'')+(c.valor?' · '+fmt(c.valor)+'/mês':'');
+  const av=document.getElementById('perfil-avatar');
+  av.textContent=initials(c.nome);av.style.background=avatarColor(c.nome);
+
+  // ── TAB INFORMAÇÕES ──
+  const v=c.vencimento?new Date(c.vencimento+'T12:00:00'):null;
+  const dias=v?Math.ceil((v-new Date())/864e5):null;
+  document.getElementById('perfil-tab-info').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+      <div>
+        <div class="perfil-section-title">Dados do Cliente</div>
+        <div style="font-size:13px;line-height:2.2">
+          <div>📋 <b>${c.tipodoc?.toUpperCase()||'—'}</b>: ${c.doc||'—'}</div>
+          <div>👤 ${c.responsavel||'—'}</div>
+          <div>📞 ${c.tel||'—'}</div>
+          <div>✉️ ${c.email||'—'}</div>
+          <div>🛠️ ${c.servico||'—'}</div>
+          <div>💰 ${fmt(c.valor||0)}/mês</div>
+          <div>📅 Início: ${c.inicio?new Date(c.inicio+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>
+          <div>⏳ Contrato até: ${v?v.toLocaleDateString('pt-BR'):'—'}
+            ${dias!==null?`<span class="badge ${dias<0?'badge-red':dias<=30?'badge-amber':'badge-green'}" style="margin-left:6px">${dias<0?'Vencido':dias<=30?dias+'d':'Em dia'}</span>`:''}
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="perfil-section-title">Tarefas Pendentes</div>
+        ${tk.length?tk.slice(0,6).map(t=>`<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span class="badge ${t.prioridade==='urgente'?'badge-red':t.prioridade==='alta'?'badge-amber':'badge-purple'}" style="font-size:9px">${t.prioridade}</span><span>${t.titulo}</span></div>`).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">Sem tarefas pendentes ✓</div>'}
+      </div>
+    </div>`;
+
+  // ── TAB FINANCEIRO ──
+  const totalRecebido=pgtos.filter(p=>p.status==='recebido').reduce((s,p)=>s+Number(p.valor),0);
+  const totalPendente=pgtos.filter(p=>p.status==='pendente'||p.status==='atrasado').reduce((s,p)=>s+Number(p.valor),0);
+  const formaIcon={pix:'💸',dinheiro:'💵',cartao:'💳',permuta:'🤝',boleto:'📄',transferencia:'🏦'};
+  const statusBadge={recebido:'badge-green',pendente:'badge-amber',atrasado:'badge-red'};
+  const statusLabel={recebido:'✅ Recebido',pendente:'⏳ Pendente',atrasado:'🔴 Atrasado'};
+  document.getElementById('perfil-tab-fin').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+      <div style="background:var(--green-bg);border:1px solid rgba(34,197,94,0.2);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Total Recebido</div>
+        <div style="font-family:var(--font-head);font-size:20px;font-weight:800;color:var(--green)">${fmt(totalRecebido)}</div>
+      </div>
+      <div style="background:var(--amber-bg);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">A Receber</div>
+        <div style="font-family:var(--font-head);font-size:20px;font-weight:800;color:var(--amber)">${fmt(totalPendente)}</div>
+      </div>
+      <div style="background:var(--accent-soft);border:1px solid rgba(204,51,255,0.15);border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Valor do Contrato</div>
+        <div style="font-family:var(--font-head);font-size:20px;font-weight:800;color:var(--accent)">${fmt(c.valor||0)}<span style="font-size:11px;font-weight:400">/mês</span></div>
       </div>
     </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.8px">Histórico de Pagamentos</div>
+      <button class="btn btn-primary btn-sm" onclick="abrirPgto(${c.id})">+ Lançar Pagamento</button>
+    </div>
+    ${pgtos.length?`<div style="display:flex;flex-direction:column;gap:6px">
+      ${pgtos.map(p=>`<div style="display:flex;align-items:center;justify-content:space-between;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">${formaIcon[p.forma]||'💰'}</span>
+          <div>
+            <div style="font-size:13px;font-weight:500">${p.desc}</div>
+            <div style="font-size:11px;color:var(--text3)">${new Date(p.data+'T12:00:00').toLocaleDateString('pt-BR')} · ${p.forma||'—'}${p.obs?' · '+p.obs:''}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="badge ${statusBadge[p.status]||'badge-purple'}">${statusLabel[p.status]||p.status}</span>
+          <span style="font-family:var(--font-head);font-weight:700;font-size:14px;color:${p.status==='recebido'?'var(--green)':p.status==='atrasado'?'var(--red)':'var(--amber)'}">${fmt(p.valor)}</span>
+          <button onclick="removerPagamento(${p.id},${c.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>
+        </div>
+      </div>`).join('')}
+    </div>`:'<div class="empty" style="padding:40px"><div class="empty-icon">💳</div><div class="empty-text">Nenhum pagamento lançado</div><div style="margin-top:12px"><button class="btn btn-primary btn-sm" onclick="abrirPgto('+c.id+')">+ Lançar primeiro pagamento</button></div></div>'}`;
+
+  // ── TAB OBSERVAÇÕES ──
+  document.getElementById('perfil-tab-obs').innerHTML=`
+    <div style="margin-bottom:14px">
+      <div class="perfil-section-title" style="margin-bottom:10px">Observações do Cliente</div>
+      <textarea class="form-textarea" id="perfil-obs-texto" style="min-height:160px;font-size:13px">${c.obs||''}</textarea>
+    </div>
+    <button class="btn btn-primary btn-sm" onclick="salvarObsCliente(${c.id})">💾 Salvar Observações</button>`;
+
+  // ── TAB DOCS ──
+  document.getElementById('perfil-tab-docs').innerHTML=`
     <div class="perfil-section"><div class="perfil-section-title">📊 Relatórios <button class="btn btn-ghost btn-sm" onclick="abrirModalDocCliente('relatorio','${c.nome}')">+ Novo</button></div>
       ${relats.length?relats.map(d=>dMiniHtml(d)).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum relatório</div>'}
     </div>
@@ -792,8 +935,61 @@ function verPerfil(id){
     <div class="perfil-section"><div class="perfil-section-title">🗺️ Planejamentos <button class="btn btn-ghost btn-sm" onclick="abrirModalDocCliente('planejamento','${c.nome}')">+ Novo</button></div>
       ${plans.length?plans.map(d=>dMiniHtml(d)).join(''):'<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhum planejamento</div>'}
     </div>`;
+
+  perfilTab('info');
   document.getElementById('perfil-btn-excluir').setAttribute('onclick',`excluirCliente(${c.id})`);
   openModal('modal-perfil');
+}
+
+function abrirPgto(clienteId){
+  document.getElementById('pgto-cliente').value=clienteId;
+  document.getElementById('pgto-data').value=today();
+  document.getElementById('pgto-desc').value='';
+  document.getElementById('pgto-valor').value='';
+  document.getElementById('pgto-obs').value='';
+  document.getElementById('pgto-status').value='recebido';
+  document.getElementById('pgto-forma').value='pix';
+  // pre-fill valor do contrato
+  const c=DB.get('clientes').find(x=>x.id==clienteId);
+  if(c&&c.valor)document.getElementById('pgto-valor').value=c.valor;
+  openModal('modal-pgto');
+}
+
+function salvarPagamento(){
+  const desc=document.getElementById('pgto-desc').value.trim();
+  const valor=Number(document.getElementById('pgto-valor').value);
+  const data=document.getElementById('pgto-data').value;
+  if(!desc||!valor||!data)return alert('Preencha descrição, valor e data.');
+  const clienteId=Number(document.getElementById('pgto-cliente').value);
+  const pgtos=DB.get('pagamentos')||[];
+  pgtos.push({
+    id:uid(),clienteId,
+    desc,valor,data,
+    forma:document.getElementById('pgto-forma').value,
+    status:document.getElementById('pgto-status').value,
+    obs:document.getElementById('pgto-obs').value
+  });
+  DB.set('pagamentos',pgtos);
+  closeModal('modal-pgto');
+  verPerfil(clienteId);
+  perfilTab('fin');
+}
+
+function removerPagamento(pgtoId,clienteId){
+  if(!confirm('Remover este pagamento?'))return;
+  DB.set('pagamentos',(DB.get('pagamentos')||[]).filter(p=>p.id!=pgtoId));
+  verPerfil(clienteId);
+  perfilTab('fin');
+}
+
+function salvarObsCliente(id){
+  const cl=DB.get('clientes'),c=cl.find(x=>x.id==id);
+  if(!c)return;
+  c.obs=document.getElementById('perfil-obs-texto').value;
+  DB.set('clientes',cl);
+  // small visual feedback
+  const btn=event.target;btn.textContent='✅ Salvo!';
+  setTimeout(()=>btn.textContent='💾 Salvar Observações',1800);
 }
 function dMiniHtml(d){return`<div class="doc-mini"><div><div class="doc-mini-title">${d.titulo}</div><div class="doc-mini-sub">${d.data?new Date(d.data+'T12:00:00').toLocaleDateString('pt-BR'):''}</div>${d.conteudo?`<div style="font-size:11px;color:var(--text2);margin-top:3px;max-width:500px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.conteudo}</div>`:''}</div><div style="display:flex;gap:6px;flex-shrink:0"><button class="btn btn-ghost btn-sm" onclick="verDoc(${d.id})">Ver</button><button onclick="removerDoc(${d.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button></div></div>`;}
 function abrirModalDocCliente(tipo,nome){closeModal('modal-perfil');const n={relatorio:'Relatório',briefing:'Briefing',planejamento:'Planejamento'};document.getElementById('modal-doc-title').textContent='Novo '+n[tipo];document.getElementById('doc-tipo').value=tipo;document.getElementById('doc-cli-fixo').value=nome;populateSelects();setTimeout(()=>{const s=document.getElementById('doc-cliente');if(s)for(let o of s.options)if(o.value===nome){o.selected=true;break}},50);openModal('modal-documento');}
