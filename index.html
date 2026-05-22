@@ -576,7 +576,8 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 
 <script>
 // CONFIGURACAO gerenciada pelo modal — não edite manualmente
-const Config = { sheetsUrl: localStorage.getItem('gs_url') || '' };
+const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbz6k705HInHkMAXvwa2CB1suGMhuwc0XwyOpRdQmI1KophkDHq3DOL7bfFkHLqRv6umOg/exec';
+const Config = { sheetsUrl: localStorage.getItem('gs_url') || SHEETS_URL_PADRAO };
 
 const DB={
   get(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}},
