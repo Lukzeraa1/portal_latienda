@@ -257,7 +257,11 @@ tr:hover td{background:rgba(204,51,255,0.03)}
   </nav>
   <div class="sidebar-footer">
     <div class="sidebar-date" id="sidebar-date"></div>
-    <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;font-size:11px;color:var(--text3)" onclick="GS.abrirConfig()">⚙️ Google Sheets</button>
+    <!-- STATUS DE SINCRONIZAÇÃO -->
+    <div id="sync-status" onclick="GS.abrirConfig()" style="margin-top:10px;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--accent-soft)'" onmouseout="this.style.background='transparent'">
+      <div id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .4s;box-shadow:0 0 0 0 transparent"></div>
+      <span id="sync-label" style="font-size:11px;color:var(--text3)">Verificando...</span>
+    </div>
   </div>
 </aside>
 
@@ -575,10 +579,11 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 </div>
 
 <script>
-// CONFIGURACAO gerenciada pelo modal — não edite manualmente
-const SHEETS_URL_PADRAO = 'https://script.google.com/macros/s/AKfycbz6k705HInHkMAXvwa2CB1suGMhuwc0XwyOpRdQmI1KophkDHq3DOL7bfFkHLqRv6umOg/exec';
-const Config = { sheetsUrl: localStorage.getItem('gs_url') || SHEETS_URL_PADRAO };
+// ── CONFIGURAÇÃO ──────────────────────────────────
+const ENDPOINT_PADRAO = 'https://script.google.com/macros/s/AKfycbxqxAxgDlaSR1mR34Tsiq7WZkzGltm8n2GI-ouKk8j-5EsRQvhq0lBb1ERlR3eS1YEfUQ/exec';
+const Config = { sheetsUrl: localStorage.getItem('gs_url') || ENDPOINT_PADRAO };
 
+// ── DB com auto-sync ───────────────────────────────
 const DB={
   get(k){try{return JSON.parse(localStorage.getItem(k))||[]}catch{return[]}},
   set(k,v){
@@ -588,48 +593,136 @@ const DB={
 };
 
 const TABELAS=['clientes','prospeccao','tarefas','receitas','despesas','eventos','documentos','lembretes','metas','pagamentos'];
+
+// ── Controle do indicador de status (bolinha) ──────
+const SyncDot={
+  _dot(){return document.getElementById('sync-dot')},
+  _lbl(){return document.getElementById('sync-label')},
+  set(state){
+    const dot=this._dot(),lbl=this._lbl();if(!dot||!lbl)return;
+    const map={
+      ok:   {bg:'#22c55e', shadow:'0 0 6px 2px rgba(34,197,94,0.5)',   txt:'Sincronizado'},
+      err:  {bg:'#ef4444', shadow:'0 0 6px 2px rgba(239,68,68,0.5)',   txt:'Sem conexão'},
+      sync: {bg:'#f59e0b', shadow:'0 0 6px 2px rgba(245,158,11,0.4)', txt:'Salvando...'},
+      off:  {bg:'#5a5a6e', shadow:'none',                              txt:'Offline'},
+    };
+    const s=map[state]||map.off;
+    dot.style.background=s.bg;
+    dot.style.boxShadow=s.shadow;
+    lbl.textContent=s.txt;
+    lbl.style.color=state==='ok'?'var(--green)':state==='err'?'var(--red)':state==='sync'?'var(--amber)':'var(--text3)';
+  }
+};
+
+// ── GS — camada de sincronização ───────────────────
 const GS={
-  _bar(){return document.getElementById('gs-syncbar');},
+  _saveTimer:null,
+  _bar(){return document.getElementById('gs-syncbar')},
   _status(msg,type){
     const bar=this._bar();if(!bar)return;
-    const bg={info:'rgba(59,130,246,0.15)',ok:'rgba(34,197,94,0.15)',err:'rgba(239,68,68,0.15)',warn:'rgba(245,158,11,0.15)'};
     const ic={info:'sync',ok:'check_circle',err:'error',warn:'warning'};
-    bar.style.background=bg[type]||bg.info;bar.style.display='flex';
+    bar.style.display='flex';
     bar.querySelector('#gs-sync-msg').textContent=msg;
-    bar.querySelector('#gs-sync-icon').textContent=ic[type]||'sync';
-    bar.querySelector('#gs-sync-icon').style.color=type==='ok'?'var(--green)':type==='err'?'var(--red)':type==='warn'?'var(--amber)':'var(--blue)';
-    if(type==='ok'||type==='err')setTimeout(()=>bar.style.display='none',4000);
+    const icon=bar.querySelector('#gs-sync-icon');
+    icon.textContent=ic[type]||'sync';
+    icon.style.color=type==='ok'?'var(--green)':type==='err'?'var(--red)':type==='warn'?'var(--amber)':'var(--blue)';
+    if(type==='ok'||type==='err')setTimeout(()=>bar.style.display='none',3000);
   },
+
+  // Salva uma tabela — chamado automaticamente por DB.set
   async sync(tabela,dados){
     if(!Config.sheetsUrl)return;
-    this._status('Salvando '+tabela+'...','info');
+    SyncDot.set('sync');
     try{
-      await fetch(Config.sheetsUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'set',tabela,dados})});
-      this._status('Salvo no Sheets','ok');
-    }catch(e){this._status('Erro: '+e.message,'err');}
+      const r=await fetch(Config.sheetsUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({acao:'set',tabela,dados})
+      });
+      const json=await r.json();
+      if(json.erro)throw new Error(json.erro);
+      SyncDot.set('ok');
+    }catch(e){
+      SyncDot.set('err');
+      this._status('Falha ao salvar: '+e.message,'err');
+    }
   },
-  async carregarTudo(){
-    if(!Config.sheetsUrl){this._status('Cole a URL do Apps Script nas Configuracoes','warn');return false;}
-    this._status('Carregando do Google Sheets...','info');
+
+  // Carrega todos os dados do backend (usado no init e no polling)
+  async carregarTudo(silencioso=false){
+    if(!Config.sheetsUrl){SyncDot.set('off');return false;}
+    if(!silencioso)this._status('Carregando dados...','info');
     try{
       const r=await fetch(Config.sheetsUrl+'?acao=getAll');
       const dados=await r.json();
       if(dados.erro)throw new Error(dados.erro);
       TABELAS.forEach(t=>{if(dados[t]!==undefined)localStorage.setItem(t,JSON.stringify(dados[t]));});
-      this._status('Dados carregados!','ok');
+      SyncDot.set('ok');
+      if(!silencioso)this._status('Sincronizado!','ok');
       return true;
-    }catch(e){this._status('Usando dados locais ('+e.message+')','warn');return false;}
+    }catch(e){
+      SyncDot.set('err');
+      if(!silencioso)this._status('Usando dados locais','warn');
+      return false;
+    }
   },
+
+  // Força envio de tudo (botão manual no modal de config)
   async sincronizarTudo(){
-    if(!Config.sheetsUrl){alert('Cole a URL do Apps Script nas Configuracoes primeiro!');return;}
-    this._status('Sincronizando tudo...','info');
+    if(!Config.sheetsUrl){alert('Configure o endpoint primeiro.');return;}
+    this._status('Sincronizando...','info');
+    SyncDot.set('sync');
     try{
       const payload={};TABELAS.forEach(t=>{payload[t]=DB.get(t);});
       await fetch(Config.sheetsUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({acao:'setAll',dados:payload})});
+      SyncDot.set('ok');
       this._status('Tudo sincronizado!','ok');
-    }catch(e){this._status('Erro: '+e.message,'err');}
+      render(currentPage);
+    }catch(e){
+      SyncDot.set('err');
+      this._status('Erro: '+e.message,'err');
+    }
   },
-  abrirConfig(){document.getElementById('modal-gsconfig').classList.add('open');document.getElementById('gs-url-input').value=Config.sheetsUrl;}
+
+  // Polling: verifica e puxa atualizações de outros dispositivos
+  iniciarPolling(){
+    if(!Config.sheetsUrl)return;
+    // Primeira verificação em 5s, depois a cada 30s
+    setTimeout(()=>this._poll(),5000);
+    setInterval(()=>this._poll(),30000);
+  },
+
+  async _poll(){
+    if(!Config.sheetsUrl||document.hidden)return;
+    try{
+      const r=await fetch(Config.sheetsUrl+'?acao=getAll');
+      const dados=await r.json();
+      if(dados.erro)return;
+      let mudou=false;
+      TABELAS.forEach(t=>{
+        if(dados[t]!==undefined){
+          const local=JSON.stringify(DB.get(t));
+          const remoto=JSON.stringify(dados[t]);
+          if(local!==remoto){
+            localStorage.setItem(t,JSON.stringify(dados[t]));
+            mudou=true;
+          }
+        }
+      });
+      if(mudou){
+        render(currentPage);
+        this._status('Dados atualizados de outro dispositivo','ok');
+      }
+      SyncDot.set('ok');
+    }catch(e){
+      SyncDot.set('err');
+    }
+  },
+
+  abrirConfig(){
+    document.getElementById('modal-gsconfig').classList.add('open');
+    document.getElementById('gs-url-input').value=Config.sheetsUrl||'';
+  }
 };
 function uid(){return Date.now()+Math.random()}
 function fmt(v){return'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2})}
@@ -1199,12 +1292,14 @@ function showToasts(){const l=DB.get('lembretes').filter(x=>x.ativo);const c=doc
 // INIT
 function gsSalvarConfig(){
   const url=document.getElementById('gs-url-input').value.trim();
-  if(!url){alert('Cole a URL do Apps Script antes de salvar!');return;}
+  if(!url){alert('Cole a URL do endpoint antes de salvar!');return;}
   Config.sheetsUrl=url;
   localStorage.setItem('gs_url',url);
   document.getElementById('modal-gsconfig').classList.remove('open');
-  GS._status('URL salva! Carregando dados do Sheets...','info');
-  GS.carregarTudo().then(ok=>{if(ok){render(currentPage);}});
+  GS.carregarTudo().then(ok=>{
+    if(ok){render(currentPage);}
+    GS.iniciarPolling();
+  });
 }
 async function gsTestarConexao(){
   const url=document.getElementById('gs-url-input').value.trim();
@@ -1222,14 +1317,15 @@ async function init(){
   const td=today();['cli-inicio','cli-vencimento','tar-data','rec-data','des-data','ev-data','doc-data','lem-data','churn-data','pros-followup'].forEach(id=>{const el=document.getElementById(id);if(el&&el.type==='date')el.value=td;});
 
   if(Config.sheetsUrl){
-    // Tem URL configurada: carrega direto do Sheets (sem seedData)
+    SyncDot.set('sync');
     document.getElementById('loading-overlay').style.display='flex';
     const ok=await GS.carregarTudo();
     document.getElementById('loading-overlay').style.display='none';
-    // Se veio vazio do Sheets (primeira vez), popula com dados de exemplo
     if(ok && DB.get('clientes').length===0) seedData();
+    // Inicia polling automático para sincronizar com outros dispositivos
+    GS.iniciarPolling();
   } else {
-    // Sem URL: usa localStorage, popula exemplo se vazio
+    SyncDot.set('off');
     seedData();
   }
 
@@ -1238,43 +1334,49 @@ async function init(){
 init();
 </script>
 
-<!-- SYNC BAR -->
+<!-- SYNC BAR (notificações discretas de save/erro) -->
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<div id="gs-syncbar" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(59,130,246,0.15);border:1px solid rgba(59,130,246,0.3);border-radius:30px;padding:8px 18px;z-index:9999;align-items:center;gap:10px;font-size:12px;color:var(--text);backdrop-filter:blur(8px);box-shadow:0 4px 20px rgba(0,0,0,0.3)">
-  <span class="material-icons" id="gs-sync-icon" style="font-size:16px;color:var(--blue)">sync</span>
-  <span id="gs-sync-msg">Sincronizando...</span>
+<div id="gs-syncbar" style="display:none;position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(28,28,33,0.95);border:1px solid var(--border2);border-radius:30px;padding:8px 18px;z-index:9999;align-items:center;gap:10px;font-size:12px;color:var(--text);backdrop-filter:blur(10px);box-shadow:0 4px 24px rgba(0,0,0,0.4)">
+  <span class="material-icons" id="gs-sync-icon" style="font-size:15px;color:var(--blue)">sync</span>
+  <span id="gs-sync-msg">Salvando...</span>
 </div>
 
-<!-- MODAL CONFIG SHEETS -->
+<!-- MODAL CONFIG (acessível clicando na bolinha) -->
 <div class="modal-overlay" id="modal-gsconfig">
-  <div class="modal" style="width:560px"><div class="modal-header"><span class="modal-title">⚙️ Configurar Google Sheets</span><button class="modal-close" onclick="document.getElementById('modal-gsconfig').classList.remove('open')">✕</button></div>
-  <div class="modal-body">
-    <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.8;color:var(--text2)">
-      <b style="color:var(--text);font-size:13px">Como configurar:</b><br>
-      1. Abra o Google Sheets e crie uma planilha nova<br>
-      2. Menu <b>Extensoes → Apps Script</b><br>
-      3. Cole o codigo do arquivo <b>apps_script_latienda.gs</b><br>
-      4. Clique em <b>Implantar → Nova implantacao</b><br>
-      5. Tipo: <b>App da Web</b> · Acesso: <b>Qualquer pessoa</b><br>
-      6. Copie a URL gerada e cole abaixo
+  <div class="modal" style="width:520px">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Configurações de Sincronização</span>
+      <button class="modal-close" onclick="document.getElementById('modal-gsconfig').classList.remove('open')">✕</button>
     </div>
-    <div class="form-group"><label class="form-label">URL do Apps Script *</label><input class="form-input" id="gs-url-input" placeholder="https://script.google.com/macros/s/...../exec"></div>
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button class="btn btn-ghost btn-sm" onclick="gsTestarConexao()">🔌 Testar conexao</button>
-      <button class="btn btn-ghost btn-sm" onclick="GS.sincronizarTudo()">☁️ Sincronizar agora</button>
+    <div class="modal-body">
+      <div style="background:var(--accent-soft);border:1px solid rgba(204,51,255,0.2);border-radius:10px;padding:14px 16px;margin-bottom:16px;font-size:12px;line-height:1.9;color:var(--text2)">
+        <b style="color:var(--text);font-size:13px">Como ativar a sincronização:</b><br>
+        1. Configure o backend conforme as instruções recebidas<br>
+        2. Copie a URL de endpoint gerada<br>
+        3. Cole abaixo e clique em <b>Salvar</b><br>
+        <span style="color:var(--text3);font-size:11px">Os dados serão sincronizados automaticamente em todos os dispositivos.</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">URL do endpoint *</label>
+        <input class="form-input" id="gs-url-input" placeholder="https://...">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-ghost btn-sm" onclick="gsTestarConexao()">🔌 Testar conexão</button>
+        <button class="btn btn-ghost btn-sm" onclick="GS.sincronizarTudo()">☁️ Forçar sincronização</button>
+      </div>
+      <div id="gs-test-result" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
     </div>
-    <div id="gs-test-result" style="margin-top:10px;font-size:12px;color:var(--text2)"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-gsconfig').classList.remove('open')">Fechar</button>
+      <button class="btn btn-primary" onclick="gsSalvarConfig()">Salvar</button>
+    </div>
   </div>
-  <div class="modal-footer">
-    <button class="btn btn-ghost" onclick="document.getElementById('modal-gsconfig').classList.remove('open')">Fechar</button>
-    <button class="btn btn-primary" onclick="gsSalvarConfig()">Salvar URL</button>
-  </div></div>
 </div>
 
 <!-- LOADING OVERLAY -->
 <div id="loading-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,13,15,0.92);backdrop-filter:blur(8px);z-index:9998;flex-direction:column;align-items:center;justify-content:center;gap:18px">
   <div style="width:48px;height:48px;border:3px solid rgba(204,51,255,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite"></div>
-  <div style="font-family:var(--font-head);font-size:15px;color:var(--text2)">Carregando dados do Google Sheets...</div>
+  <div style="font-family:var(--font-head);font-size:15px;color:var(--text2)">Carregando dados...</div>
   <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 </div>
 </body>
