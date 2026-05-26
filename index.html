@@ -773,7 +773,7 @@ const Auth = {
   ensureAdmin() {
     const users = this.getUsers();
     if (!users.find(u => u.role === 'admin')) {
-      users.push({ id:'admin', nome:'Lucas', login:'lucas', senha:'lucas1910', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
+      users.push({ id:'admin', nome:'Lucas Bezerra', login:'lucas', senha:'lucas1910', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
       this.saveUsers(users);
     }
   },
@@ -1399,6 +1399,7 @@ function verPerfil(id){
         <div style="display:flex;align-items:center;gap:10px">
           <span class="badge ${statusBadge[p.status]||'badge-purple'}">${statusLabel[p.status]||p.status}</span>
           <span style="font-family:var(--font-head);font-weight:700;font-size:14px;color:${p.status==='recebido'?'var(--green)':p.status==='atrasado'?'var(--red)':'var(--amber)'}">${fmt(p.valor)}</span>
+          ${p.status==='recebido'?`<button onclick="gerarComprovante('${p.id}')" title="Gerar comprovante" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:15px">🧾</button>`:''}
           <button onclick="removerPagamento(${p.id},${c.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px">✕</button>
         </div>
       </div>`).join('')}
@@ -1449,18 +1450,72 @@ function salvarPagamento(){
   const data=document.getElementById('pgto-data').value;
   if(!desc||!valor||!data)return alert('Preencha descrição, valor e data.');
   const clienteId=Number(document.getElementById('pgto-cliente').value);
+  const cliente=DB.get('clientes').find(x=>x.id==clienteId);
+  const nomeCliente=cliente?cliente.nome:'';
+  const forma=document.getElementById('pgto-forma').value;
+  const status=document.getElementById('pgto-status').value;
+  const obs=document.getElementById('pgto-obs').value;
+  const pgtoId=uid();
+  // Salva em pagamentos
   const pgtos=DB.get('pagamentos')||[];
-  pgtos.push({
-    id:uid(),clienteId,
-    desc,valor,data,
-    forma:document.getElementById('pgto-forma').value,
-    status:document.getElementById('pgto-status').value,
-    obs:document.getElementById('pgto-obs').value
-  });
+  pgtos.push({id:pgtoId,clienteId,desc,valor,data,forma,status,obs,nomeCliente});
   DB.set('pagamentos',pgtos);
+  // Espelha em receitas para aparecer no financeiro
+  const rc=DB.get('receitas');
+  rc.push({id:'pgto_'+pgtoId,origem:'pagamento',pgtoId,desc,cliente:nomeCliente,valor,data,status,forma,obs});
+  DB.set('receitas',rc);
   closeModal('modal-pgto');
+  // Oferece gerar comprovante
+  if(status==='recebido'){
+    setTimeout(()=>gerarComprovante(pgtoId),200);
+  }
   verPerfil(clienteId);
   perfilTab('fin');
+}
+
+function gerarComprovante(pgtoId){
+  const pgto=(DB.get('pagamentos')||[]).find(p=>p.id==pgtoId);
+  if(!pgto)return;
+  const cliente=DB.get('clientes').find(x=>x.id==pgto.clienteId)||{};
+  const formaLabels={pix:'Pix',dinheiro:'Dinheiro',cartao:'Cartão',permuta:'Permuta',boleto:'Boleto',transferencia:'Transferência'};
+  const dataFmt=pgto.data?new Date(pgto.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Comprovante</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f4f4f6;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+  .comp{background:#fff;border-radius:16px;padding:40px 44px;max-width:520px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.10)}
+  .logo{font-size:22px;font-weight:800;color:#cc33ff;letter-spacing:-0.5px;margin-bottom:4px}
+  .sub{font-size:12px;color:#888;margin-bottom:28px}
+  .titulo{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #f0f0f5}
+  .row{display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;border-bottom:1px solid #f5f5f7}
+  .row:last-of-type{border-bottom:none}
+  .label{font-size:12px;color:#888;font-weight:500;text-transform:uppercase;letter-spacing:.5px}
+  .val{font-size:14px;color:#1a1a2e;font-weight:500;text-align:right;max-width:60%}
+  .valor-grande{font-size:28px;font-weight:800;color:#22c55e;margin:20px 0 4px}
+  .status-badge{display:inline-block;padding:3px 12px;border-radius:20px;font-size:12px;font-weight:600;background:#dcfce7;color:#16a34a}
+  .rodape{margin-top:28px;padding-top:16px;border-top:1px solid #f0f0f5;font-size:11px;color:#bbb;text-align:center;line-height:1.6}
+  @media print{body{background:#fff;padding:0}.comp{box-shadow:none;border-radius:0;padding:32px}}
+</style></head><body>
+<div class="comp">
+  <div class="logo">LaT</div>
+  <div class="sub">Portal Interno · Marketing</div>
+  <div class="titulo">🧾 Comprovante de Pagamento</div>
+  <div style="text-align:center;margin-bottom:24px">
+    <div class="valor-grande">R$ ${Number(pgto.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+    <span class="status-badge">✅ Recebido</span>
+  </div>
+  <div class="row"><span class="label">Cliente</span><span class="val">${cliente.nome||'—'}</span></div>
+  <div class="row"><span class="label">Descrição</span><span class="val">${pgto.desc}</span></div>
+  <div class="row"><span class="label">Data</span><span class="val">${dataFmt}</span></div>
+  <div class="row"><span class="label">Forma de pagamento</span><span class="val">${formaLabels[pgto.forma]||pgto.forma}</span></div>
+  ${pgto.obs?`<div class="row"><span class="label">Observação</span><span class="val">${pgto.obs}</span></div>`:''}
+  <div class="rodape">Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}<br>Este comprovante não tem validade fiscal</div>
+</div>
+<script>window.onload=()=>{window.print()}<\/script>
+</body></html>`;
+  const w=window.open('','_blank','width=620,height=800');
+  if(w){w.document.write(html);w.document.close();}
 }
 
 function removerPagamento(pgtoId,clienteId){
@@ -1645,7 +1700,19 @@ function renderFinanceiro(){
     <div class="stat-card" style="--stat-color:var(--accent)"><div class="stat-icon">♾️</div><div class="stat-label">LTV Médio</div><div class="stat-value" style="color:var(--accent)">${fmt(ltv)}</div><div class="stat-change">Ticket × ${duracaoMedia} meses de contrato</div></div>
     <div class="stat-card" style="--stat-color:var(--blue)"><div class="stat-icon">🚀</div><div class="stat-label">MRR</div><div class="stat-value" style="color:var(--blue)">${fmt(mrr)}</div><div class="stat-change">Receita recorrente mensal</div></div>
     <div class="stat-card" style="--stat-color:var(--green)"><div class="stat-icon">📆</div><div class="stat-label">Estimativa Anual</div><div class="stat-value" style="color:var(--green)">${fmt(anoEst)}</div><div class="stat-change">MRR × 12 meses</div></div>`;
-  document.getElementById('lista-receitas').innerHTML=rc.length?rc.map(r=>`<div class="finance-item"><div><div class="finance-label">${r.desc}</div><div class="finance-sub">${r.cliente||'Avulso'}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge ${r.status==='recebido'?'badge-green':'badge-amber'}">${r.status}</span><div class="finance-value" style="color:var(--green)">${fmt(r.valor)}</div><button onclick="removerReceita(${r.id})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div></div>`).join(''):'<div class="empty"><div class="empty-text">Nenhuma receita</div></div>';
+  // Unifica receitas manuais + pagamentos de clientes (sem duplicar os espelhados)
+  const pgtosMes=(DB.get('pagamentos')||[]);
+  const todasReceitas=[...rc];
+  // Calcula totais unificados
+  const rTUnif=todasReceitas.reduce((s,r)=>s+Number(r.valor),0);
+  const pendUnif=todasReceitas.filter(r=>r.status==='pendente').reduce((s,r)=>s+Number(r.valor),0);
+  document.getElementById('lista-receitas').innerHTML=todasReceitas.length?todasReceitas.sort((a,b)=>b.data.localeCompare(a.data)).map(r=>{
+    const isPgto=r.origem==='pagamento';
+    const badge=r.status==='recebido'?'badge-green':r.status==='atrasado'?'badge-red':'badge-amber';
+    const origemTag=isPgto?'<span class="badge badge-blue" style="font-size:10px">💳 Cliente</span>':'<span class="badge badge-purple" style="font-size:10px">✏️ Manual</span>';
+    const compBtn=isPgto&&r.status==='recebido'?`<button onclick="gerarComprovante('${r.pgtoId}')" title="Gerar comprovante" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:14px">🧾</button>`:'';
+    return `<div class="finance-item"><div style="display:flex;flex-direction:column;gap:3px"><div class="finance-label">${r.desc}</div><div style="display:flex;gap:6px;align-items:center"><div class="finance-sub">${r.cliente||'Avulso'}</div>${origemTag}</div></div><div style="display:flex;align-items:center;gap:8px"><span class="badge ${badge}">${r.status}</span>${compBtn}<div class="finance-value" style="color:var(--green)">${fmt(r.valor)}</div><button onclick="removerReceita(${r.id})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div></div>`;
+  }).join(''):'<div class="empty"><div class="empty-text">Nenhuma receita</div></div>';
   document.getElementById('lista-despesas').innerHTML=ds.length?ds.map(d=>`<div class="finance-item"><div><div class="finance-label">${d.desc}</div><div class="finance-sub">${d.categoria}</div></div><div style="display:flex;align-items:center;gap:8px"><div class="finance-value" style="color:var(--red)">-${fmt(d.valor)}</div><button onclick="removerDespesa(${d.id})" style="background:none;border:none;color:var(--text3);cursor:pointer">✕</button></div></div>`).join(''):'<div class="empty"><div class="empty-text">Nenhuma despesa</div></div>';
   const pc={};rc.forEach(r=>{pc[r.cliente||'Avulso']=(pc[r.cliente||'Avulso']||0)+Number(r.valor)});
   if(recChart)recChart.destroy();
