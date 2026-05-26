@@ -225,9 +225,106 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 ::-webkit-scrollbar-thumb:hover{background:rgba(204,51,255,0.4)}
 
 @media(max-width:900px){.stats-grid{grid-template-columns:repeat(2,1fr)}.grid-2{grid-template-columns:1fr}.pros-kanban{grid-template-columns:1fr 1fr}}
+
+/* ── AUTH SCREEN ─────────────────────────────────── */
+#auth-screen{
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  animation:fadein .3s ease;
+}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.auth-box{
+  width:420px;max-width:94vw;
+  background:var(--card);border:1px solid var(--border2);
+  border-radius:20px;padding:40px 38px 36px;
+  box-shadow:0 24px 60px rgba(0,0,0,0.6),0 0 0 1px rgba(204,51,255,0.08);
+  position:relative;overflow:hidden;
+}
+.auth-box::before{
+  content:'';position:absolute;top:-60px;right:-60px;
+  width:200px;height:200px;
+  background:radial-gradient(circle,rgba(204,51,255,0.12),transparent 70%);
+  pointer-events:none;
+}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:32px}
+.auth-logo-icon{width:44px;height:44px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(204,51,255,0.35)}
+.auth-logo-text{font-family:var(--font-head);font-size:24px;font-weight:800;color:var(--text)}
+.auth-logo-text span{color:var(--accent)}
+.auth-tagline{font-size:12px;color:var(--text3);margin-top:2px}
+.auth-title{font-family:var(--font-head);font-size:18px;font-weight:700;margin-bottom:4px}
+.auth-sub{font-size:12px;color:var(--text3);margin-bottom:24px}
+.auth-error{background:var(--red-bg);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:9px 13px;font-size:12px;color:var(--red);margin-bottom:16px;display:none}
+.auth-btn{width:100%;padding:12px;font-size:14px;font-weight:600;border-radius:10px;cursor:pointer;border:none;font-family:var(--font-head);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;box-shadow:0 4px 20px rgba(204,51,255,0.3);transition:all .15s;margin-top:8px}
+.auth-btn:hover{opacity:.9;box-shadow:0 4px 28px rgba(204,51,255,0.45)}
+.auth-footer{text-align:center;font-size:11px;color:var(--text3);margin-top:20px}
+
+/* ── USER BADGE na topbar ─────────────────────────── */
+.user-badge{display:flex;align-items:center;gap:10px;cursor:pointer;padding:6px 10px;border-radius:10px;transition:background .15s;border:1px solid transparent}
+.user-badge:hover{background:var(--card);border-color:var(--border)}
+.user-badge-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;color:#fff}
+.user-badge-name{font-size:13px;font-weight:500}
+.user-badge-role{font-size:10px;color:var(--text3)}
+.user-badge-caret{font-size:10px;color:var(--text3)}
+
+/* ── USER MENU dropdown ────────────────────────────── */
+.user-menu{
+  position:absolute;top:calc(100% + 8px);right:0;
+  background:var(--card2);border:1px solid var(--border2);
+  border-radius:12px;width:200px;z-index:300;
+  box-shadow:0 8px 32px rgba(0,0,0,0.5);
+  overflow:hidden;display:none;animation:modal-in .15s ease;
+}
+.user-menu.open{display:block}
+.user-menu-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:13px;cursor:pointer;transition:background .1s;color:var(--text2)}
+.user-menu-item:hover{background:var(--accent-soft);color:var(--text)}
+.user-menu-item.danger{color:var(--red)}
+.user-menu-item.danger:hover{background:var(--red-bg)}
+.user-menu-divider{height:1px;background:var(--border);margin:4px 0}
+
+/* ── USUÁRIOS page ─────────────────────────────────── */
+.user-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;align-items:center;gap:14px;margin-bottom:10px;transition:border-color .15s}
+.user-card:hover{border-color:var(--border2)}
+.user-card-info{flex:1}
+.user-card-name{font-family:var(--font-head);font-size:14px;font-weight:700}
+.user-card-meta{font-size:11px;color:var(--text3);margin-top:2px}
+.user-card-perms{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
+
+/* ── PERM CHECKBOXES ────────────────────────────────── */
+.perm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.perm-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s}
+.perm-item:hover{border-color:var(--accent);background:var(--accent-soft)}
+.perm-item input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.perm-item-label{font-size:13px}
+.perm-item-sub{font-size:10px;color:var(--text3);margin-top:1px}
 </style>
 </head>
 <body>
+
+<!-- ═══ TELA DE LOGIN ═══ -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">🏠</div>
+      <div>
+        <div class="auth-logo-text">La<span>T</span></div>
+        <div class="auth-tagline">Portal Interno · Marketing</div>
+      </div>
+    </div>
+    <div class="auth-title">Bem-vindo de volta</div>
+    <div class="auth-sub">Faça login para acessar o portal</div>
+    <div class="auth-error" id="auth-error">Usuário ou senha incorretos.</div>
+    <div class="form-group">
+      <label class="form-label">Usuário</label>
+      <input class="form-input" id="auth-user" placeholder="seu.usuario" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('auth-pass').focus()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input class="form-input" id="auth-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')authLogin()">
+    </div>
+    <button class="auth-btn" onclick="authLogin()">Entrar</button>
+    <div class="auth-footer">Portal interno · Acesso restrito</div>
+  </div>
+</div>
 
 <div id="popup-container"></div>
 
@@ -254,6 +351,8 @@ tr:hover td{background:rgba(204,51,255,0.03)}
     <button class="nav-item" onclick="navigate('metas')"><span class="icon">🏆</span>Metas</button>
     <button class="nav-item" onclick="navigate('documentos')"><span class="icon">📁</span>Docs & Briefings</button>
     <button class="nav-item" onclick="navigate('lembretes')"><span class="icon">🔔</span>Lembretes</button>
+    <div class="nav-label" id="nav-label-admin" style="display:none">Administração</div>
+    <button class="nav-item" id="nav-usuarios" onclick="navigate('usuarios')" style="display:none"><span class="icon">🔑</span>Usuários</button>
   </nav>
   <div class="sidebar-footer">
     <div class="sidebar-date" id="sidebar-date"></div>
@@ -272,7 +371,24 @@ tr:hover td{background:rgba(204,51,255,0.03)}
       <div class="topbar-title" id="topbar-title">Dashboard</div>
       <div class="topbar-sub" id="topbar-sub">Visão geral — LaT</div>
     </div>
-    <div id="topbar-action"></div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div id="topbar-action"></div>
+      <div style="position:relative">
+        <div class="user-badge" onclick="toggleUserMenu()" id="user-badge">
+          <div class="user-badge-avatar" id="ub-avatar"></div>
+          <div>
+            <div class="user-badge-name" id="ub-name"></div>
+            <div class="user-badge-role" id="ub-role"></div>
+          </div>
+          <span class="user-badge-caret">▾</span>
+        </div>
+        <div class="user-menu" id="user-menu">
+          <div class="user-menu-item" id="menu-usuarios" onclick="navigate('usuarios');closeUserMenu()" style="display:none">👥 Gerenciar Usuários</div>
+          <div class="user-menu-divider" id="menu-div-usuarios" style="display:none"></div>
+          <div class="user-menu-item danger" onclick="authLogout()">🚪 Sair</div>
+        </div>
+      </div>
+    </div>
   </div>
   <div class="content">
 
@@ -379,6 +495,11 @@ tr:hover td{background:rgba(204,51,255,0.03)}
     <!-- LEMBRETES -->
     <div class="page" id="page-lembretes">
       <div class="card"><div class="card-header"><div class="card-title">Lembretes Ativos</div></div><div id="lista-lembretes"></div></div>
+    </div>
+
+    <!-- USUÁRIOS (admin only) -->
+    <div class="page" id="page-usuarios">
+      <div id="usuarios-list"></div>
     </div>
 
   </div>
@@ -579,10 +700,221 @@ tr:hover td{background:rgba(204,51,255,0.03)}
   <div class="modal"><div class="modal-header"><span class="modal-title" id="pros-detail-title">Lead</span><button class="modal-close" onclick="closeModal('modal-pros-detail')">✕</button></div><div class="modal-body" id="pros-detail-body"></div><div class="modal-footer" id="pros-detail-footer"></div></div>
 </div>
 
+<!-- MODAL NOVO/EDITAR USUÁRIO -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal" style="width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-user-title">Novo Usuário</span>
+      <button class="modal-close" onclick="closeModal('modal-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-user-id">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nome completo *</label><input class="form-input" id="u-nome" placeholder="Ex: João Silva"></div>
+        <div class="form-group"><label class="form-label">Usuário (login) *</label><input class="form-input" id="u-login" placeholder="joao.silva"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Senha *</label><input class="form-input" id="u-senha" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group"><label class="form-label">Função / Cargo</label><input class="form-input" id="u-cargo" placeholder="Ex: Videomaker, Editor..."></div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:16px 0;padding-top:16px">
+        <div style="font-family:var(--font-head);font-size:13px;font-weight:700;margin-bottom:4px">Módulos visíveis</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">Selecione quais seções este colaborador poderá acessar</div>
+        <div class="perm-grid" id="perm-grid"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUsuario()">Salvar Usuário</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ── AUTH & USERS ──────────────────────────────────────
+
+const MODULES = [
+  {id:'dashboard',   label:'Dashboard',      icon:'📊', sub:'Visão geral e KPIs'},
+  {id:'clientes',    label:'Clientes',        icon:'👥', sub:'Carteira de clientes'},
+  {id:'prospeccao',  label:'Prospecção',      icon:'🎯', sub:'Pipeline de leads'},
+  {id:'financeiro',  label:'Financeiro',      icon:'💰', sub:'Receitas e despesas'},
+  {id:'tarefas',     label:'Tarefas',         icon:'✅', sub:'Gestão de tarefas'},
+  {id:'calendario',  label:'Calendário',      icon:'🗓', sub:'Eventos editoriais'},
+  {id:'churn',       label:'Churn',           icon:'📉', sub:'Retenção de clientes'},
+  {id:'metas',       label:'Metas',           icon:'🏆', sub:'Objetivos e resultados'},
+  {id:'documentos',  label:'Docs & Briefings',icon:'📁', sub:'Documentos e relatórios'},
+  {id:'lembretes',   label:'Lembretes',       icon:'🔔', sub:'Alertas e lembretes'},
+];
+
+const Auth = {
+  _key: 'lat_users',
+  _sessionKey: 'lat_session',
+
+  getUsers() { try { return JSON.parse(localStorage.getItem(this._key)) || []; } catch { return []; } },
+  saveUsers(u) { localStorage.setItem(this._key, JSON.stringify(u)); },
+  currentUser() { try { return JSON.parse(sessionStorage.getItem(this._sessionKey)); } catch { return null; } },
+  isAdmin() { const u = this.currentUser(); return u && u.role === 'admin'; },
+  canAccess(module) {
+    const u = this.currentUser();
+    if (!u) return false;
+    if (u.role === 'admin') return true;
+    return Array.isArray(u.perms) && u.perms.includes(module);
+  },
+
+  ensureAdmin() {
+    const users = this.getUsers();
+    if (!users.find(u => u.role === 'admin')) {
+      users.push({ id:'admin', nome:'Administrador', login:'admin', senha:'admin123', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
+      this.saveUsers(users);
+    }
+  },
+
+  login(login, senha) {
+    const u = this.getUsers().find(u => u.login === login.trim() && u.senha === senha);
+    if (!u) return false;
+    sessionStorage.setItem(this._sessionKey, JSON.stringify(u));
+    return true;
+  },
+
+  logout() { sessionStorage.removeItem(this._sessionKey); location.reload(); }
+};
+
+function authLogin() {
+  const login = document.getElementById('auth-user').value;
+  const senha = document.getElementById('auth-pass').value;
+  const err = document.getElementById('auth-error');
+  if (!login || !senha) { err.textContent='Preencha usuário e senha.'; err.style.display='block'; return; }
+  if (Auth.login(login, senha)) {
+    const screen = document.getElementById('auth-screen');
+    screen.style.opacity = '0'; screen.style.transition = 'opacity .25s';
+    setTimeout(() => { screen.style.display='none'; applyAuth(); }, 260);
+  } else {
+    err.textContent='Usuário ou senha incorretos.'; err.style.display='block';
+    document.getElementById('auth-pass').value='';
+  }
+}
+
+function authLogout() { Auth.logout(); }
+
+function applyAuth() {
+  const user = Auth.currentUser();
+  if (!user) return;
+  // Topbar badge
+  const av = document.getElementById('ub-avatar');
+  av.textContent = user.nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+  av.style.background = user.cor || '#cc33ff';
+  document.getElementById('ub-name').textContent = user.nome;
+  document.getElementById('ub-role').textContent = user.role==='admin' ? 'Administrador' : (user.cargo||'Colaborador');
+  // Admin controls
+  if (Auth.isAdmin()) {
+    document.getElementById('nav-label-admin').style.display='';
+    document.getElementById('nav-usuarios').style.display='';
+    document.getElementById('menu-usuarios').style.display='';
+    document.getElementById('menu-div-usuarios').style.display='';
+  }
+  // Nav permissions
+  const navMap = {
+    dashboard:`navigate('dashboard')`, clientes:`navigate('clientes')`, prospeccao:`navigate('prospeccao')`,
+    financeiro:`navigate('financeiro')`, tarefas:`navigate('tarefas')`, calendario:`navigate('calendario')`,
+    churn:`navigate('churn')`, metas:`navigate('metas')`, documentos:`navigate('documentos')`, lembretes:`navigate('lembretes')`,
+  };
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const onclick = item.getAttribute('onclick')||'';
+    const mod = Object.keys(navMap).find(k => navMap[k]===onclick);
+    if (mod) item.style.display = Auth.canAccess(mod) ? '' : 'none';
+  });
+  // Go to first accessible page
+  const first = MODULES.find(m => Auth.canAccess(m.id));
+  if (first) navigate(first.id);
+}
+
+function toggleUserMenu() { document.getElementById('user-menu').classList.toggle('open'); }
+function closeUserMenu() { document.getElementById('user-menu').classList.remove('open'); }
+document.addEventListener('click', e => { if (!e.target.closest('#user-badge') && !e.target.closest('#user-menu')) closeUserMenu(); });
+
+// ── Página Usuários ────────────────────────────────────
+function renderUsuarios() {
+  const users = Auth.getUsers().filter(u => u.role !== 'admin');
+  const el = document.getElementById('usuarios-list');
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div><div style="font-family:var(--font-head);font-size:16px;font-weight:700">Colaboradores</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:2px">${users.length} colaborador${users.length!==1?'es':''} cadastrado${users.length!==1?'s':''}</div></div>
+      <button class="btn btn-primary" onclick="abrirModalUsuario()">+ Novo Colaborador</button>
+    </div>
+    ${users.length===0 ? `<div class="card" style="text-align:center;padding:48px 24px">
+      <div style="font-size:40px;margin-bottom:12px">👥</div>
+      <div style="font-family:var(--font-head);font-size:15px;font-weight:700;margin-bottom:6px">Nenhum colaborador ainda</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Crie acessos para sua equipe e controle o que cada um pode ver</div>
+      <button class="btn btn-primary" onclick="abrirModalUsuario()">+ Criar primeiro colaborador</button>
+    </div>` : users.map(u => {
+      const perms = (u.perms||[]).map(p => { const m=MODULES.find(x=>x.id===p); return m?`<span class="badge badge-purple" style="font-size:10px">${m.icon} ${m.label}</span>`:''; }).join('');
+      return `<div class="user-card">
+        <div style="width:42px;height:42px;border-radius:50%;background:${u.cor||'#3b82f6'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0">
+          ${u.nome.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase()}
+        </div>
+        <div class="user-card-info">
+          <div class="user-card-name">${u.nome}</div>
+          <div class="user-card-meta">@${u.login} · ${u.cargo||'Colaborador'}</div>
+          <div class="user-card-perms">${perms||'<span style="font-size:11px;color:var(--text3)">Sem módulos liberados</span>'}</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="abrirModalUsuario('${u.id}')">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="excluirUsuario('${u.id}')">🗑️</button>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+const CORES_USR=['#cc33ff','#3b82f6','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#8b5cf6'];
+
+function abrirModalUsuario(id) {
+  const users = Auth.getUsers();
+  const u = id ? users.find(x=>x.id===id) : null;
+  document.getElementById('modal-user-title').textContent = u ? 'Editar Colaborador' : 'Novo Colaborador';
+  document.getElementById('edit-user-id').value = u ? u.id : '';
+  document.getElementById('u-nome').value = u ? u.nome : '';
+  document.getElementById('u-login').value = u ? u.login : '';
+  document.getElementById('u-senha').value = u ? u.senha : '';
+  document.getElementById('u-cargo').value = u ? (u.cargo||'') : '';
+  document.getElementById('perm-grid').innerHTML = MODULES.map(m=>`
+    <label class="perm-item">
+      <input type="checkbox" name="perm" value="${m.id}" ${u&&u.perms&&u.perms.includes(m.id)?'checked':''}>
+      <div><div class="perm-item-label">${m.icon} ${m.label}</div><div class="perm-item-sub">${m.sub}</div></div>
+    </label>`).join('');
+  openModal('modal-usuario');
+}
+
+function salvarUsuario() {
+  const nome = document.getElementById('u-nome').value.trim();
+  const login = document.getElementById('u-login').value.trim().toLowerCase().replace(/\s+/g,'.');
+  const senha = document.getElementById('u-senha').value;
+  const cargo = document.getElementById('u-cargo').value.trim();
+  const editId = document.getElementById('edit-user-id').value;
+  if (!nome||!login||!senha) return alert('Preencha nome, usuário e senha.');
+  if (senha.length < 4) return alert('Senha deve ter pelo menos 4 caracteres.');
+  const perms = [...document.querySelectorAll('#perm-grid input[type=checkbox]:checked')].map(c=>c.value);
+  const users = Auth.getUsers();
+  if (users.find(u=>u.login===login&&u.id!==editId)) return alert('Este nome de usuário já existe.');
+  if (editId) {
+    const idx = users.findIndex(u=>u.id===editId);
+    if (idx>-1) { users[idx]={...users[idx],nome,login,senha,cargo,perms}; Auth.saveUsers(users); }
+  } else {
+    const cor = CORES_USR[users.length % CORES_USR.length];
+    users.push({id:'u_'+Date.now(),nome,login,senha,cargo,role:'colaborador',perms,cor});
+    Auth.saveUsers(users);
+  }
+  closeModal('modal-usuario');
+  renderUsuarios();
+}
+
+function excluirUsuario(id) {
+  if (!confirm('Remover este colaborador?')) return;
+  Auth.saveUsers(Auth.getUsers().filter(u=>u.id!==id));
+  renderUsuarios();
+}
+
 // ── CONFIGURAÇÃO ──────────────────────────────────
-const ENDPOINT_PADRAO = 'https://script.google.com/macros/s/AKfycbxqxAxgDlaSR1mR34Tsiq7WZkzGltm8n2GI-ouKk8j-5EsRQvhq0lBb1ERlR3eS1YEfUQ/exec';
-const Config = { sheetsUrl: localStorage.getItem('gs_url') || ENDPOINT_PADRAO };
 
 // ── DB com auto-sync ───────────────────────────────
 const DB={
@@ -810,10 +1142,14 @@ const pageConfig={
   metas:{title:'Metas',sub:'Acompanhe seus objetivos',action:'<button class="btn btn-primary" onclick="abrirModalMeta()">+ Nova Meta</button>'},
   documentos:{title:'Docs & Briefings',sub:'Relatórios, briefings e planejamentos',action:''},
   lembretes:{title:'Lembretes',sub:'Seus lembretes ativos',action:'<button class="btn btn-primary" onclick="openModal(\'modal-lembrete\')">+ Novo Lembrete</button>'},
+  usuarios:{title:'Usuários & Acessos',sub:'Gerencie colaboradores e permissões',action:''},
 };
 
 let currentPage='dashboard';
 function navigate(p){
+  // Permission guard
+  if(p!=='usuarios' && !Auth.canAccess(p)) return;
+  if(p==='usuarios' && !Auth.isAdmin()) return;
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
@@ -828,6 +1164,7 @@ function render(p){
   if(p==='dashboard')renderDashboard();if(p==='clientes')renderClientes();if(p==='prospeccao')renderPros();
   if(p==='financeiro')renderFinanceiro();if(p==='tarefas')renderTarefas();if(p==='calendario')renderCalendario();
   if(p==='churn')renderChurn();if(p==='metas')renderMetas();if(p==='documentos')renderDocumentos();if(p==='lembretes')renderLembretes();
+  if(p==='usuarios')renderUsuarios();
   updateBadges();
 }
 function updateBadges(){
@@ -1408,6 +1745,16 @@ async function gsTestarConexao(){
   }catch(e){res.style.color='var(--red)';res.textContent='Erro: '+e.message;}
 }
 async function init(){
+  // ── Auth init ─────────────────────────────────────
+  Auth.ensureAdmin(); // garante que admin padrão existe
+
+  // Se já tem sessão ativa, pular login
+  if (Auth.currentUser()) {
+    document.getElementById('auth-screen').style.display='none';
+    // continua abaixo normalmente, applyAuth() chamado depois do carregamento
+  }
+  // (caso contrário, a tela de login fica visível e o init do app só roda após login)
+
   document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const td=today();['cli-inicio','cli-vencimento','tar-data','rec-data','des-data','ev-data','doc-data','lem-data','churn-data','pros-followup'].forEach(id=>{const el=document.getElementById(id);if(el&&el.type==='date')el.value=td;});
 
@@ -1417,14 +1764,16 @@ async function init(){
     const ok=await GS.carregarTudo();
     document.getElementById('loading-overlay').style.display='none';
     if(ok && DB.get('clientes').length===0) seedData();
-    // Inicia polling automático para sincronizar com outros dispositivos
     GS.iniciarPolling();
   } else {
     SyncDot.set('off');
     seedData();
   }
 
-  renderDashboard();updateBadges();setTimeout(showToasts,1500);
+  if (Auth.currentUser()) {
+    applyAuth();
+    setTimeout(showToasts,1500);
+  }
 }
 init();
 </script>
