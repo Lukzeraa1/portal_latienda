@@ -915,6 +915,12 @@ function excluirUsuario(id) {
 }
 
 // ── CONFIGURAÇÃO ──────────────────────────────────
+const Config = {
+  sheetsUrl: localStorage.getItem('gs_url') || 'https://script.google.com/macros/s/AKfycbzdTWLTB4FS0UVkz7AbyKDN65zDqu0AnVE1TMYuk_wSwbAHv4RSQbStg-p2GYuQd_dcLg/exec'
+};
+if (!localStorage.getItem('gs_url')) {
+  localStorage.setItem('gs_url', Config.sheetsUrl);
+}
 
 // ── DB com auto-sync ───────────────────────────────
 const DB={
@@ -1729,7 +1735,7 @@ function gsSalvarConfig(){
   localStorage.setItem('gs_url',url);
   document.getElementById('modal-gsconfig').classList.remove('open');
   GS.carregarTudo().then(ok=>{
-    if(ok){render(currentPage);}
+    if(ok){render(currentPage);}else{render(currentPage);}
     GS.iniciarPolling();
   });
 }
