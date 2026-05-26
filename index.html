@@ -426,6 +426,14 @@ tr:hover td{background:rgba(204,51,255,0.03)}
 
     <!-- FINANCEIRO -->
     <div class="page" id="page-financeiro">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap">
+        <div style="font-size:13px;color:var(--text2);font-weight:500">Período:</div>
+        <select class="form-select" id="fin-mes-sel" onchange="renderFinanceiro()" style="width:160px">
+          <option value="">Todos os meses</option>
+        </select>
+        <select class="form-select" id="fin-ano-sel" onchange="renderFinanceiro()" style="width:100px"></select>
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fin-mes-sel').value='';document.getElementById('fin-ano-sel').value=new Date().getFullYear();renderFinanceiro()">Limpar filtro</button>
+      </div>
       <div class="stats-grid" id="fin-stats"></div>
       <div class="stats-grid" id="fin-stats2" style="margin-bottom:20px"></div>
       <div class="grid-2" style="margin-bottom:18px">
@@ -515,7 +523,16 @@ tr:hover td{background:rgba(204,51,255,0.03)}
     <div class="form-row"><div class="form-group"><label class="form-label">Telefone / WhatsApp</label><input class="form-input" id="cli-tel" placeholder="(00) 00000-0000"></div><div class="form-group"><label class="form-label">E-mail</label><input class="form-input" id="cli-email" type="email" placeholder="contato@empresa.com"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">Serviço Principal</label><select class="form-select" id="cli-servico"><option>Tráfego Pago</option><option>Social Media</option><option>Produção de Vídeo</option><option>Tráfego + Social</option><option>Full Service</option></select></div><div class="form-group"><label class="form-label">Valor Mensal (R$)</label><input class="form-input" id="cli-valor" type="number" placeholder="3000"></div></div>
     <div class="form-row"><div class="form-group"><label class="form-label">Data de Início</label><input class="form-input" id="cli-inicio" type="date"></div><div class="form-group"><label class="form-label">Vencimento do Contrato</label><input class="form-input" id="cli-vencimento" type="date"></div></div>
-    <div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" id="cli-obs"></textarea></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Dia de Vencimento da Mensalidade</label><input class="form-input" id="cli-dia-pgto" type="number" min="1" max="31" placeholder="Ex: 5 (todo dia 5)"></div><div class="form-group"><label class="form-label">Verba Mensal em Anúncios (R$)</label><input class="form-input" id="cli-verba" type="number" placeholder="Ex: 2000"></div></div>
+    <div class="form-group"><label class="form-label">Plataformas de Anúncio</label><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px" id="cli-plataformas-wrap">
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="Meta Ads" class="cli-plat"> Meta Ads</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="Google Ads" class="cli-plat"> Google Ads</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="TikTok Ads" class="cli-plat"> TikTok Ads</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="YouTube Ads" class="cli-plat"> YouTube Ads</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="LinkedIn Ads" class="cli-plat"> LinkedIn Ads</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:5px 10px"><input type="checkbox" value="Pinterest Ads" class="cli-plat"> Pinterest Ads</label>
+    </div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Indicado por</label><input class="form-input" id="cli-indicacao" placeholder="Ex: João Silva, Google..."></div><div class="form-group"><label class="form-label">Observações</label><textarea class="form-textarea" id="cli-obs" style="min-height:38px"></textarea></div></div>
   </div>
   <div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal('modal-cliente');resetFormCliente()">Cancelar</button><button class="btn btn-primary" id="cli-btn-salvar" onclick="salvarCliente()">Salvar Cliente</button></div></div>
 </div>
@@ -773,7 +790,7 @@ const Auth = {
   ensureAdmin() {
     const users = this.getUsers();
     if (!users.find(u => u.role === 'admin')) {
-      users.push({ id:'admin', nome:'Lucas Bezerra', login:'lucas', senha:'lucas1910', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
+      users.push({ id:'admin', nome:'Administrador', login:'admin', senha:'admin123', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
       this.saveUsers(users);
     }
   },
@@ -1346,10 +1363,13 @@ function verPerfil(id){
           <div>🆔 <b>Código</b>: <span style="font-family:var(--font-head);font-weight:700;color:var(--accent)">#${c.codigo||'—'}</span></div>
           <div>📋 <b>${c.tipodoc?.toUpperCase()||'—'}</b>: ${c.doc||'<span style="color:var(--amber)">Não informado</span>'}</div>
           <div>👤 ${c.responsavel||'—'}</div>
-          <div>📞 ${c.tel||'—'}</div>
+          <div>📞 ${c.tel?`<a href="https://wa.me/55${c.tel.replace(/\D/g,'')}" target="_blank" style="color:var(--green);text-decoration:none">${c.tel} 💬</a>`:'—'}</div>
           <div>✉️ ${c.email||'—'}</div>
           <div>🛠️ ${c.servico||'—'}</div>
-          <div>💰 ${fmt(c.valor||0)}/mês</div>
+          <div>💰 ${fmt(c.valor||0)}/mês${c.diaPgto?` · vence dia <b>${c.diaPgto}</b>`:''}</div>
+          ${c.verba?`<div>📣 Verba em anúncios: <b>${fmt(c.verba)}/mês</b></div>`:''}
+          ${c.plataformas&&c.plataformas.length?`<div>🎯 ${c.plataformas.map(p=>`<span class="badge badge-blue" style="font-size:10px;margin-right:3px">${p}</span>`).join('')}</div>`:''}
+          ${c.indicacao?`<div>🤝 Indicado por: <b>${c.indicacao}</b></div>`:''}
           <div>📅 Início: ${c.inicio?new Date(c.inicio+'T12:00:00').toLocaleDateString('pt-BR'):'<span style="color:var(--amber)">Não informado</span>'}</div>
           <div>⏳ Contrato até: ${v?v.toLocaleDateString('pt-BR'):'<span style="color:var(--amber)">Não informado</span>'}
             ${dias!==null?`<span class="badge ${dias<0?'badge-red':dias<=30?'badge-amber':'badge-green'}" style="margin-left:6px">${dias<0?'Vencido':dias<=30?dias+'d':'Em dia'}</span>`:''}
@@ -1561,6 +1581,10 @@ function salvarCliente(){
     c.inicio=document.getElementById('cli-inicio').value;
     c.vencimento=document.getElementById('cli-vencimento').value;
     c.obs=document.getElementById('cli-obs').value;
+    c.diaPgto=document.getElementById('cli-dia-pgto').value;
+    c.verba=Number(document.getElementById('cli-verba').value)||0;
+    c.plataformas=[...document.querySelectorAll('.cli-plat:checked')].map(x=>x.value);
+    c.indicacao=document.getElementById('cli-indicacao').value;
     DB.set('clientes',cl);
     closeModal('modal-cliente');
     resetFormCliente();
@@ -1579,6 +1603,10 @@ function salvarCliente(){
       valor:Number(document.getElementById('cli-valor').value)||0,
       inicio:document.getElementById('cli-inicio').value,
       vencimento:document.getElementById('cli-vencimento').value,
+      diaPgto:document.getElementById('cli-dia-pgto').value,
+      verba:Number(document.getElementById('cli-verba').value)||0,
+      plataformas:[...document.querySelectorAll('.cli-plat:checked')].map(x=>x.value),
+      indicacao:document.getElementById('cli-indicacao').value,
       obs:document.getElementById('cli-obs').value,
     });
     DB.set('clientes',cl);
@@ -1588,7 +1616,8 @@ function salvarCliente(){
   }
 }
 function resetFormCliente(){
-  ['cli-nome','cli-responsavel','cli-doc','cli-tel','cli-email','cli-obs'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['cli-nome','cli-responsavel','cli-doc','cli-tel','cli-email','cli-obs','cli-dia-pgto','cli-verba','cli-indicacao'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.querySelectorAll('.cli-plat').forEach(cb=>cb.checked=false);
   document.getElementById('cli-edit-id').value='';
   document.getElementById('modal-cli-title').textContent='Novo Cliente';
   document.getElementById('cli-btn-salvar').textContent='Salvar Cliente';
@@ -1613,6 +1642,10 @@ function editarCliente(id){
     document.getElementById('cli-inicio').value=c.inicio||'';
     document.getElementById('cli-vencimento').value=c.vencimento||'';
     document.getElementById('cli-obs').value=c.obs||'';
+    document.getElementById('cli-dia-pgto').value=c.diaPgto||'';
+    document.getElementById('cli-verba').value=c.verba||'';
+    document.getElementById('cli-indicacao').value=c.indicacao||'';
+    document.querySelectorAll('.cli-plat').forEach(cb=>{cb.checked=(c.plataformas||[]).includes(cb.value);});
     openModal('modal-cliente');
   },150);
 }
@@ -1656,8 +1689,35 @@ function removerTarefa(id){DB.set('tarefas',DB.get('tarefas').filter(t=>t.id!=id
 
 // FINANCEIRO
 let recChart;
+function initFinFiltros(){
+  const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const selMes=document.getElementById('fin-mes-sel');
+  const selAno=document.getElementById('fin-ano-sel');
+  if(!selMes||!selAno)return;
+  if(selMes.options.length<=1){
+    meses.forEach((m,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=m;selMes.appendChild(o);});
+  }
+  if(selAno.options.length===0){
+    const anoAtual=new Date().getFullYear();
+    for(let a=anoAtual-2;a<=anoAtual+1;a++){const o=document.createElement('option');o.value=a;o.textContent=a;if(a===anoAtual)o.selected=true;selAno.appendChild(o);}
+  }
+}
 function renderFinanceiro(){
-  const rc=DB.get('receitas'),ds=DB.get('despesas');
+  initFinFiltros();
+  const mesSelEl=document.getElementById('fin-mes-sel');
+  const anoSelEl=document.getElementById('fin-ano-sel');
+  const mesFil=mesSelEl?Number(mesSelEl.value)||null:null;
+  const anoFil=anoSelEl?Number(anoSelEl.value)||null:null;
+  const filtrarData=(data)=>{
+    if(!mesFil&&!anoFil)return true;
+    if(!data)return false;
+    const d=new Date(data+'T12:00:00');
+    if(anoFil&&d.getFullYear()!==anoFil)return false;
+    if(mesFil&&d.getMonth()+1!==mesFil)return false;
+    return true;
+  };
+  const rcAll=DB.get('receitas'),dsAll=DB.get('despesas');
+  const rc=rcAll.filter(r=>filtrarData(r.data)),ds=dsAll.filter(d=>filtrarData(d.data));
   const cl=DB.get('clientes'),at=cl.filter(c=>c.status==='ativo');
   const rT=rc.reduce((s,r)=>s+Number(r.valor),0),dT=ds.reduce((s,d)=>s+Number(d.valor),0);
   const pend=rc.filter(r=>r.status==='pendente').reduce((s,r)=>s+Number(r.valor),0);
