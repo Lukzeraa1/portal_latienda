@@ -773,7 +773,7 @@ const Auth = {
   ensureAdmin() {
     const users = this.getUsers();
     if (!users.find(u => u.role === 'admin')) {
-      users.push({ id:'admin', nome:'Administrador', login:'admin', senha:'admin123', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
+      users.push({ id:'admin', nome:'Lucas', login:'lucas', senha:'lucas1910', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
       this.saveUsers(users);
     }
   },
