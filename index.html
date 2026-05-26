@@ -750,8 +750,8 @@ const Auth = {
   _key: 'lat_users',
   _sessionKey: 'lat_session',
 
-  getUsers() { try { return JSON.parse(localStorage.getItem(this._key)) || []; } catch { return []; } },
-  saveUsers(u) { localStorage.setItem(this._key, JSON.stringify(u)); },
+  getUsers() { try { return JSON.parse(localStorage.getItem('usuarios')) || []; } catch { return []; } },
+  saveUsers(u) { localStorage.setItem('usuarios', JSON.stringify(u)); if(typeof DB !== 'undefined' && Config.sheetsUrl) GS.sync('usuarios', u); },
   currentUser() { try { return JSON.parse(sessionStorage.getItem(this._sessionKey)); } catch { return null; } },
   isAdmin() { const u = this.currentUser(); return u && u.role === 'admin'; },
   canAccess(module) {
@@ -925,7 +925,7 @@ const DB={
   }
 };
 
-const TABELAS=['clientes','prospeccao','tarefas','receitas','despesas','eventos','documentos','lembretes','metas','pagamentos'];
+const TABELAS=['clientes','prospeccao','tarefas','receitas','despesas','eventos','documentos','lembretes','metas','pagamentos','usuarios'];
 
 // ── Controle do indicador de status (bolinha) ──────
 const SyncDot={
