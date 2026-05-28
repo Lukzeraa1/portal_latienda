@@ -777,7 +777,11 @@ const Auth = {
   _sessionKey: 'lat_session',
 
   getUsers() { try { return JSON.parse(localStorage.getItem('usuarios')) || []; } catch { return []; } },
-  saveUsers(u) { localStorage.setItem('usuarios', JSON.stringify(u)); if(typeof DB !== 'undefined' && Config.sheetsUrl) GS.sync('usuarios', u); },
+  saveUsers(u) {
+    localStorage.setItem('usuarios', JSON.stringify(u));
+    // Sincroniza imediatamente com o Sheets
+    if(typeof GS !== 'undefined' && Config.sheetsUrl) GS.sync('usuarios', u);
+  },
   currentUser() { try { return JSON.parse(sessionStorage.getItem(this._sessionKey)); } catch { return null; } },
   isAdmin() { const u = this.currentUser(); return u && u.role === 'admin'; },
   canAccess(module) {
@@ -788,6 +792,8 @@ const Auth = {
   },
 
   ensureAdmin() {
+    // Só cria admin padrão se não houver absolutamente nenhum usuário local
+    // O init() chama isso DEPOIS de carregar o Sheets, então se veio do Sheets não cria duplicata
     const users = this.getUsers();
     if (!users.find(u => u.role === 'admin')) {
       users.push({ id:'admin', nome:'Administrador', login:'admin', senha:'admin123', cargo:'Administrador', role:'admin', perms: MODULES.map(m=>m.id), cor:'#cc33ff' });
@@ -1913,19 +1919,10 @@ async function gsTestarConexao(){
   }catch(e){res.style.color='var(--red)';res.textContent='Erro: '+e.message;}
 }
 async function init(){
-  // ── Auth init ─────────────────────────────────────
-  Auth.ensureAdmin(); // garante que admin padrão existe
-
-  // Se já tem sessão ativa, pular login
-  if (Auth.currentUser()) {
-    document.getElementById('auth-screen').style.display='none';
-    // continua abaixo normalmente, applyAuth() chamado depois do carregamento
-  }
-  // (caso contrário, a tela de login fica visível e o init do app só roda após login)
-
   document.getElementById('sidebar-date').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
   const td=today();['cli-inicio','cli-vencimento','tar-data','rec-data','des-data','ev-data','doc-data','lem-data','churn-data','pros-followup'].forEach(id=>{const el=document.getElementById(id);if(el&&el.type==='date')el.value=td;});
 
+  // ── Carrega Sheets PRIMEIRO, antes de qualquer lógica de auth ──
   if(Config.sheetsUrl){
     SyncDot.set('sync');
     document.getElementById('loading-overlay').style.display='flex';
@@ -1938,9 +1935,22 @@ async function init(){
     seedData();
   }
 
+  // ── Auth init DEPOIS do Sheets — usuários do Sheets têm prioridade ──
+  Auth.ensureAdmin(); // só cria admin padrão se o Sheets não trouxe nenhum usuário
+
+  // Se já tem sessão ativa, pular tela de login
   if (Auth.currentUser()) {
-    applyAuth();
-    setTimeout(showToasts,1500);
+    // Revalida sessão: verifica se o usuário ainda existe no Sheets
+    const sessao = Auth.currentUser();
+    const existe = Auth.getUsers().find(u => u.id === sessao.id && u.senha === sessao.senha);
+    if (existe) {
+      document.getElementById('auth-screen').style.display='none';
+      applyAuth();
+      setTimeout(showToasts,1500);
+    } else {
+      // Usuário foi removido ou senha trocada no Sheets — força novo login
+      Auth.logout();
+    }
   }
 }
 init();
